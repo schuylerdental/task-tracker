@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schuyler Dental — Master Project Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans','Segoe UI',sans-serif;background:#0B0D11;color:#E2E8F0;min-height:100vh;-webkit-tap-highlight-color:transparent}
+button{font-family:inherit}
+
+.header{padding:20px 16px 14px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.header h1{font-size:18px;font-weight:700;color:#F8FAFC;letter-spacing:-0.02em}
+.header .sub{font-size:12px;color:#64748B;font-weight:500;margin-top:2px}
+
+.view-toggle{display:flex;gap:4px;margin-top:10px;flex-wrap:wrap}
+.view-btn{padding:5px 14px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid transparent;background:transparent;color:#64748B}
+.view-btn.active{border-color:rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);color:#F8FAFC}
+
+.search-wrap{padding:10px 16px 0;display:flex;gap:8px;align-items:center}
+.search-box{flex:1;padding:7px 12px;border-radius:6px;font-size:12px;font-family:inherit;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:#E2E8F0;outline:none}
+.search-box::placeholder{color:#64748B}
+.search-box:focus{border-color:rgba(96,165,250,0.4);background:rgba(255,255,255,0.06)}
+
+.filters{padding:10px 16px;display:flex;flex-wrap:wrap;gap:6px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.filter-btn{padding:5px 10px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid rgba(255,255,255,0.06);background:transparent;color:#94A3B8;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.filter-btn.active{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.2);color:#F8FAFC}
+.dot{width:7px;height:7px;border-radius:2px;flex-shrink:0}
+
+.owner-filters{padding:6px 16px;display:flex;flex-wrap:wrap;gap:6px}
+.owner-btn{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid rgba(255,255,255,0.06);background:transparent;color:#94A3B8}
+.owner-btn.active{background:rgba(167,139,250,0.15);border-color:rgba(167,139,250,0.3);color:#A78BFA}
+
+.content{padding:14px 16px 32px}
+
+.day-group{margin-bottom:14px}
+.day-header{display:flex;align-items:center;gap:8px;margin-bottom:5px;padding-bottom:4px;position:sticky;top:0;background:#0B0D11;z-index:2}
+.day-date{font-size:13px;font-weight:700;color:#94A3B8;min-width:70px}
+.day-date.today{color:#60A5FA}
+.day-weekday{font-size:11px;color:#475569;font-weight:500}
+.day-count{font-size:10px;color:#475569;background:rgba(255,255,255,0.04);padding:2px 8px;border-radius:10px;font-weight:600}
+.day-line{flex:1;height:1px;background:rgba(255,255,255,0.04)}
+
+.task-row{display:flex;align-items:center;gap:8px;min-height:32px;padding:4px 8px;border-radius:5px}
+.task-row.milestone{background:linear-gradient(90deg,rgba(251,191,36,0.08),transparent);border-left:3px solid #FBBF24;padding-left:10px;min-height:38px}
+.task-dot{width:6px;height:6px;border-radius:2px;flex-shrink:0;opacity:0.6}
+.task-name{font-size:12.5px;color:#CBD5E1;flex:1;overflow:hidden;text-overflow:ellipsis}
+.task-sector{font-size:9px;font-weight:500;opacity:0.7;white-space:nowrap;flex-shrink:0;text-align:right;max-width:90px;overflow:hidden;text-overflow:ellipsis}
+.task-new{font-size:8px;background:rgba(96,165,250,0.15);color:#60A5FA;padding:1px 5px;border-radius:3px;font-weight:600;margin-left:4px;flex-shrink:0}
+.task-ms{font-size:8px;background:rgba(251,191,36,0.2);color:#FBBF24;padding:1px 5px;border-radius:3px;font-weight:700;margin-left:4px;flex-shrink:0}
+.task-status{font-size:8px;padding:1px 5px;border-radius:3px;font-weight:600;margin-left:4px;flex-shrink:0}
+.task-status.st-done{background:rgba(34,197,94,0.15);color:#34D399}
+.task-status.st-in-progress{background:rgba(96,165,250,0.15);color:#60A5FA}
+.task-status.st-pending{background:rgba(251,191,36,0.15);color:#FBBF24}
+.task-owner{font-size:9px;color:#A78BFA;opacity:0.7;margin-left:4px;flex-shrink:0}
+
+.section-title{font-size:13px;font-weight:600;color:#94A3B8;margin-bottom:12px;letter-spacing:0.04em;text-transform:uppercase}
+.heatmap-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:24px;padding-bottom:4px}
+.heatmap{display:flex;gap:2px;flex-wrap:wrap}
+@media(max-width:600px){.heatmap{flex-wrap:nowrap;min-width:max-content}}
+.heat-cell{display:flex;flex-direction:column;align-items:center;gap:3px}
+.heat-box{width:24px;height:24px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;color:#F8FAFC}
+.heat-label{font-size:7px;color:#475569}
+
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.bar-label{font-size:11px;color:#CBD5E1;width:140px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{flex:1;height:14px;background:rgba(255,255,255,0.03);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px}
+.bar-count{font-size:12px;font-weight:600;min-width:22px;text-align:right}
+
+.stats{display:flex;gap:16px;flex-wrap:wrap;margin-top:24px;padding-top:18px;border-top:1px solid rgba(255,255,255,0.06)}
+.stat{text-align:center}
+.stat-value{font-size:24px;font-weight:700;color:#F8FAFC;letter-spacing:-0.02em}
+.stat-label{font-size:10px;color:#64748B;font-weight:500;margin-top:2px}
+
+.priority-group{margin-bottom:20px}
+.priority-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.priority-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:5px;letter-spacing:0.03em}
+.priority-count{font-size:11px;color:#64748B;font-weight:500}
+
+.action-item{display:flex;gap:10px;padding:10px 10px;border-radius:6px;margin-bottom:4px;background:rgba(255,255,255,0.015)}
+.action-check{width:18px;height:18px;border-radius:4px;border:2px solid rgba(255,255,255,0.15);flex-shrink:0;margin-top:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.action-check.checked{border-color:#34D399;background:#34D39930}
+.action-check.checked::after{content:'✓';color:#34D399;font-size:11px;font-weight:700}
+.action-body{flex:1}
+.action-title{font-size:13px;color:#E2E8F0;font-weight:500;margin-bottom:3px}
+.action-title.done{text-decoration:line-through;opacity:0.4}
+.action-detail{font-size:11px;color:#64748B;line-height:1.4}
+.action-tags{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap}
+.action-tag{font-size:9px;padding:2px 7px;border-radius:3px;font-weight:600}
+.action-owner-tag{font-size:9px;padding:2px 7px;border-radius:3px;font-weight:600;background:rgba(167,139,250,0.15);color:#A78BFA}
+
+.hidden{display:none}
+
+.cal-section{margin-bottom:24px}
+.cal-section-header{font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#94A3B8;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.cal-section-header .cal-icon{font-size:15px}
+.cal-event{display:flex;gap:10px;padding:10px;border-radius:6px;margin-bottom:4px;background:rgba(255,255,255,0.015);border-left:3px solid transparent}
+.cal-event.meeting{border-left-color:#60A5FA}
+.cal-event.travel{border-left-color:#FBBF24}
+.cal-date-badge{min-width:56px;text-align:center;flex-shrink:0}
+.cal-date-badge .cal-month{font-size:9px;font-weight:600;text-transform:uppercase;color:#64748B}
+.cal-date-badge .cal-day{font-size:20px;font-weight:700;color:#F8FAFC;line-height:1.2}
+.cal-date-badge .cal-weekday{font-size:9px;color:#64748B;font-weight:500}
+.cal-body{flex:1}
+.cal-title{font-size:13px;color:#E2E8F0;font-weight:500;margin-bottom:2px}
+.cal-time{font-size:11px;color:#60A5FA;font-weight:500;margin-bottom:2px}
+.cal-detail{font-size:11px;color:#64748B;line-height:1.4}
+.cal-hotel{font-size:11px;color:#FBBF24;margin-top:3px;font-weight:500}
+.cal-recurring{font-size:8px;background:rgba(96,165,250,0.15);color:#60A5FA;padding:1px 5px;border-radius:3px;font-weight:600;margin-left:6px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Schuyler Dental — Master Tracker</h1>
+  <div class="sub" id="subtitle"></div>
+  <div class="view-toggle">
+    <button class="view-btn active" onclick="setView('actions')" id="btn-actions">⚡ Action Items</button>
+    <button class="view-btn" onclick="setView('calendar')" id="btn-calendar">Calendar</button>
+    <button class="view-btn" onclick="setView('timeline')" id="btn-timeline">Timeline</button>
+    <button class="view-btn" onclick="setView('summary')" id="btn-summary">Summary</button>
+  </div>
+</div>
+
+<div class="search-wrap">
+  <input type="text" class="search-box" id="search-input" placeholder="Search tasks, actions, events..." oninput="onSearch()">
+</div>
+
+<div id="filter-wrap" class="filters"></div>
+<div id="owner-filter-wrap" class="owner-filters hidden"></div>
+
+<div class="content">
+  <div id="actions-view"></div>
+  <div id="calendar-view" class="hidden"></div>
+  <div id="timeline-view" class="hidden"></div>
+  <div id="summary-view" class="hidden"></div>
+</div>
+
+<script>
+/* Fix 3: dynamic today */
+const TODAY = new Date().toISOString().slice(0,10);
+
+function taskStatus(t){
+  if(t.st) return t.st;
+  if(t.d < TODAY) return "done";
+  if(t.d === TODAY) return "in-progress";
+  return "pending";
+}
+
+const tasks = [
+  // Jan 2 (email)
+  {n:"Neodent introduction meeting",s:"Equipment / Procurement",d:"2026-01-02",em:true},
+  // Jan 13-15 (email)
+  {n:"NSync Dental partnership (Dr. Chaudhry)",s:"Strategy / Business",d:"2026-01-13",em:true},
+  {n:"Autism certification review (IBCCES)",s:"Clinical / Training",d:"2026-01-14",em:true},
+  {n:"Mango Voice texting registration",s:"Software / IT",d:"2026-01-14",em:true},
+  {n:"401(k) plan selection (Empower)",s:"Finance / Legal",d:"2026-01-15",em:true},
+  // Jan 17
+  {n:"2025 startup financials prep",s:"Finance / Legal",d:"2026-01-17",o:"Amit"},
+  {n:"Steel framing construction Q&A",s:"Facility / Construction",d:"2026-01-17"},
+  {n:"Mango Voice vs Weave VoIP evaluation",s:"Software / IT",d:"2026-01-17"},
+  {n:"Operating agreement & legal firm",s:"Finance / Legal",d:"2026-01-17",o:"Amit"},
+  // Jan 18
+  {n:"Trane air handler troubleshooting",s:"Facility / Construction",d:"2026-01-18"},
+  // Jan 19
+  {n:"Dental camera evaluation",s:"Equipment / Procurement",d:"2026-01-19"},
+  {n:"Photography lightbox selection",s:"Equipment / Procurement",d:"2026-01-19"},
+  {n:"AI dental research project review",s:"Clinical / Training",d:"2026-01-19",o:"Amit"},
+  // Jan 20
+  {n:"Employee handbook legal review",s:"Admin / HR",d:"2026-01-20",o:"Diane"},
+  {n:"Legal cost reduction strategy",s:"Finance / Legal",d:"2026-01-20",o:"Amit"},
+  {n:"Website Terms/Privacy + SMS compliance",s:"Marketing / Branding",d:"2026-01-20"},
+  {n:"iMill milling blank selection guide",s:"Lab / Technology",d:"2026-01-20",o:"Cy"},
+  {n:"Form 2553 / S-Corp clarification",s:"Finance / Legal",d:"2026-01-20",o:"Amit"},
+  // Jan 21
+  {n:"Offer letter — Ana Carillo (DA)",s:"Admin / HR",d:"2026-01-21",o:"Diane"},
+  {n:"Offer letter — Dr. Maria (Associate)",s:"Admin / HR",d:"2026-01-21",o:"Diane",ms:true},
+  {n:"Teddy Bear Clinic RSVP",s:"Community Outreach",d:"2026-01-21",o:"Brandy"},
+  // Jan 22
+  {n:"Patient referral source tracking",s:"Admin / HR",d:"2026-01-22",o:"Princess"},
+  {n:"Archy Intelligence feature access",s:"Software / IT",d:"2026-01-22"},
+  // Jan 23
+  {n:"DOT Foods employer strategy",s:"Strategy / Business",d:"2026-01-23",o:"Amit"},
+  {n:"Leadership & strategy frameworks",s:"Strategy / Business",d:"2026-01-23",o:"Amit"},
+  {n:"Power BI training (Valantis)",s:"Strategy / Business",d:"2026-01-23",o:"Valantis"},
+  {n:"Profitability strategy fact sheet",s:"Strategy / Business",d:"2026-01-23",o:"Amit"},
+  {n:"Medicaid scope structuring",s:"Finance / Legal",d:"2026-01-23"},
+  {n:"Medicaid inquiry reply",s:"Admin / HR",d:"2026-01-23",o:"Princess"},
+  // Jan 24
+  {n:"Lab furniture layout approval",s:"Facility / Construction",d:"2026-01-24",o:"Cy"},
+  {n:"Theater & billboard outreach",s:"Marketing / Branding",d:"2026-01-24",o:"Brandy"},
+  {n:"ScanSnap cloud scanning setup",s:"Software / IT",d:"2026-01-24"},
+  {n:"Valantis payment receipt",s:"Finance / Legal",d:"2026-01-24",o:"Valantis"},
+  {n:"Articulator system selection",s:"Lab / Technology",d:"2026-01-24",o:"Cy"},
+  {n:"OsseoPress vs Densah burs",s:"Clinical / Training",d:"2026-01-24",o:"Amit"},
+  {n:"Multi-color 3D printer (peds toys)",s:"Equipment / Procurement",d:"2026-01-24"},
+  // Jan 25
+  {n:"Business credit card selection",s:"Finance / Legal",d:"2026-01-25",o:"Amit"},
+  {n:"Newspaper column topic research",s:"Marketing / Branding",d:"2026-01-25",o:"Amit"},
+  // Jan 26
+  {n:"Ivoclar product reference guide",s:"Clinical / Training",d:"2026-01-26"},
+  {n:"Ask Archy AI onboarding email",s:"Software / IT",d:"2026-01-26"},
+  {n:"AI & dental conference abstracts",s:"Clinical / Training",d:"2026-01-26",o:"Amit"},
+  // Jan 27
+  {n:"Newspaper column series launch",s:"Marketing / Branding",d:"2026-01-27",o:"Amit"},
+  {n:"Zirconia block guide (Cy)",s:"Lab / Technology",d:"2026-01-27",o:"Cy"},
+  {n:"Patient call tracking docs",s:"Admin / HR",d:"2026-01-27",o:"Princess"},
+  {n:"Skylar study guide",s:"Clinical / Training",d:"2026-01-27"},
+  {n:"Patterson instruments list",s:"Equipment / Procurement",d:"2026-01-27"},
+  {n:"Milling vs printing dentures",s:"Lab / Technology",d:"2026-01-27",o:"Cy"},
+  {n:"Exocad denture splitting",s:"Lab / Technology",d:"2026-01-27",o:"Cy"},
+  // Jan 28
+  {n:"Dell Precision workstation (Cy)",s:"Equipment / Procurement",d:"2026-01-28",o:"Cy"},
+  {n:"Duplex investment ROI analysis",s:"Finance / Legal",d:"2026-01-28",o:"Amit"},
+  {n:"Student loan repayment strategy",s:"Finance / Legal",d:"2026-01-28",o:"Amit"},
+  {n:"AADSM Sleep Medicine exam prep",s:"Clinical / Training",d:"2026-01-28",o:"Amit"},
+  // Jan 29
+  {n:"Fee schedule — UCR P80 comparison",s:"Finance / Legal",d:"2026-01-29"},
+  {n:"Fee schedule — printable PDF",s:"Finance / Legal",d:"2026-01-29"},
+  {n:"Fee schedule — code updates",s:"Finance / Legal",d:"2026-01-29"},
+  {n:"OSHA/infection control study guides",s:"Clinical / Training",d:"2026-01-29",o:"Diane"},
+  {n:"iMill bonding & materials Q&A",s:"Lab / Technology",d:"2026-01-29",o:"Cy"},
+  {n:"Goodstack nonprofit verification",s:"Admin / HR",d:"2026-01-29",em:true},
+  // Jan 30
+  {n:"Neodent implant inventory guide",s:"Equipment / Procurement",d:"2026-01-30"},
+  {n:"AlignerBase preferences guide",s:"Clinical / Training",d:"2026-01-30"},
+  // Jan 31
+  {n:"Neodent implant order",s:"Equipment / Procurement",d:"2026-01-31"},
+  {n:"Neodent MUA vs third-party",s:"Lab / Technology",d:"2026-01-31",o:"Cy"},
+  {n:"Same-day zirconia workflow",s:"Lab / Technology",d:"2026-01-31",o:"Cy"},
+  {n:"Verification jig research",s:"Lab / Technology",d:"2026-01-31",o:"Cy"},
+  // Feb 1
+  {n:"Full-arch implant workflow",s:"Clinical / Training",d:"2026-02-01",o:"Amit"},
+  {n:"Zimbis cabinet pricing",s:"Equipment / Procurement",d:"2026-02-01"},
+  {n:"Monitor & ambient lighting plan",s:"Equipment / Procurement",d:"2026-02-01"},
+  {n:"Resume update",s:"Admin / HR",d:"2026-02-01"},
+  {n:"Dr. Nossair mentorship restructuring",s:"Clinical / Training",d:"2026-02-01",o:"Amit"},
+  {n:"Digital denture wax-free workflow",s:"Lab / Technology",d:"2026-02-01",o:"Cy"},
+  {n:"Vanity phone number analysis",s:"Marketing / Branding",d:"2026-02-01",o:"Brandy"},
+  // Feb 2
+  {n:"Operations Hub overview",s:"Software / IT",d:"2026-02-02"},
+  {n:"Ops Hub logo redesign",s:"Software / IT",d:"2026-02-02"},
+  {n:"Employee social media policy",s:"Admin / HR",d:"2026-02-02",o:"Diane"},
+  {n:"Monthly operating budget ($147K)",s:"Finance / Legal",d:"2026-02-02",o:"Amit"},
+  {n:"SprintRay denture cost breakdown",s:"Lab / Technology",d:"2026-02-02",o:"Cy"},
+  {n:"Router/firewall HIPAA compliance",s:"Software / IT",d:"2026-02-02"},
+  {n:"Zimbis Teams meeting (Louis Visser)",s:"Equipment / Procurement",d:"2026-02-02",em:true},
+  // Feb 3
+  {n:"Bleeding gums newspaper article",s:"Marketing / Branding",d:"2026-02-03",o:"Amit"},
+  {n:"Google Ads copy & description",s:"Marketing / Branding",d:"2026-02-03",o:"Brandy"},
+  {n:"Pediatric dentistry study guides",s:"Clinical / Training",d:"2026-02-03"},
+  {n:"Rushville community research",s:"Marketing / Branding",d:"2026-02-03"},
+  {n:"Zimbis pricing for Reggie",s:"Equipment / Procurement",d:"2026-02-03"},
+  {n:"DA training study guides (x4)",s:"Clinical / Training",d:"2026-02-03"},
+  // Feb 4
+  {n:"CEREC design guide",s:"Clinical / Training",d:"2026-02-04"},
+  {n:"Ops Hub — CEREC integration",s:"Software / IT",d:"2026-02-04"},
+  {n:"Ops Hub — brand retheme",s:"Software / IT",d:"2026-02-04"},
+  {n:"Ops Hub — aesthetic upgrades",s:"Software / IT",d:"2026-02-04"},
+  {n:"CEREC PDF printable",s:"Clinical / Training",d:"2026-02-04"},
+  {n:"SprintRay training manual",s:"Clinical / Training",d:"2026-02-04",o:"Cy"},
+  {n:"Membership discount tiering",s:"Strategy / Business",d:"2026-02-04",o:"Amit"},
+  {n:"IDES/employer compliance guide",s:"Finance / Legal",d:"2026-02-04"},
+  {n:"Lenovo M90q configuration",s:"Equipment / Procurement",d:"2026-02-04"},
+  {n:"Lab holding tools (Cy)",s:"Equipment / Procurement",d:"2026-02-04",o:"Cy"},
+  // Feb 5
+  {n:"CDT 2026 coding guide",s:"Clinical / Training",d:"2026-02-05"},
+  {n:"Intraoral scanner deployment",s:"Equipment / Procurement",d:"2026-02-05"},
+  {n:"PTO policy update",s:"Admin / HR",d:"2026-02-05",o:"Diane"},
+  {n:"Skylar weekly schedule",s:"Admin / HR",d:"2026-02-05"},
+  {n:"Goetze Dental status check",s:"Facility / Construction",d:"2026-02-05",em:true},
+  // Feb 6
+  {n:"Samsung Odyssey monitor selection",s:"Equipment / Procurement",d:"2026-02-06"},
+  {n:"Chamber of Commerce presentation",s:"Community Outreach",d:"2026-02-06",o:"Amit"},
+  {n:"Nitrous / pediatric sedation protocols",s:"Clinical / Training",d:"2026-02-06",o:"Amit"},
+  // Feb 7
+  {n:"Medicaid / autism care response",s:"Admin / HR",d:"2026-02-07"},
+  {n:"Credential representation (BDS/DDS)",s:"Admin / HR",d:"2026-02-07",o:"Amit"},
+  {n:"Aspen vs Heartland comparison",s:"Strategy / Business",d:"2026-02-07"},
+  {n:"CIMEA credential eval (Italy)",s:"Clinical / Training",d:"2026-02-07"},
+  // Feb 8
+  {n:"Medical-grade keyboards & mice",s:"Equipment / Procurement",d:"2026-02-08"},
+  // Feb 9
+  {n:"Ops Hub — 8 new procedures (v1.2)",s:"Software / IT",d:"2026-02-09"},
+  {n:"Ops Hub — Procedure Wizard",s:"Software / IT",d:"2026-02-09"},
+  {n:"Ops Hub — GitHub tools",s:"Software / IT",d:"2026-02-09"},
+  {n:"Agentic AI for Archy",s:"Software / IT",d:"2026-02-09"},
+  {n:"Insurance verification setup",s:"Finance / Legal",d:"2026-02-09"},
+  {n:"National Toothache Day script",s:"Marketing / Branding",d:"2026-02-09",o:"Brandy"},
+  {n:"Diabetes blog post editing",s:"Marketing / Branding",d:"2026-02-09"},
+  {n:"Caries/matrix study guides",s:"Clinical / Training",d:"2026-02-09"},
+  {n:"French door refrigerator analysis",s:"Equipment / Procurement",d:"2026-02-09"},
+  {n:"Teddy Bear Clinic planning meeting",s:"Community Outreach",d:"2026-02-09",em:true,o:"Brandy"},
+  // Feb 10
+  {n:"Membership plan (Clerri/BoomCloud)",s:"Strategy / Business",d:"2026-02-10",o:"Amit"},
+  {n:"Employer outreach pamphlet",s:"Strategy / Business",d:"2026-02-10"},
+  {n:"Temporary SDF facility setup",s:"Clinical / Training",d:"2026-02-10"},
+  {n:"CE courses for Dr. Maria",s:"Clinical / Training",d:"2026-02-10"},
+  {n:"Teddy bear mascot research",s:"Marketing / Branding",d:"2026-02-10",o:"Brandy"},
+  {n:"Sticker printing setup",s:"Marketing / Branding",d:"2026-02-10",o:"Brandy"},
+  {n:"Free branded bags guide",s:"Marketing / Branding",d:"2026-02-10"},
+  {n:"Teddy bear booth planning",s:"Community Outreach",d:"2026-02-10",o:"Brandy"},
+  {n:"Outlook/M365 troubleshooting",s:"Software / IT",d:"2026-02-10"},
+  {n:"Air purifier selection",s:"Equipment / Procurement",d:"2026-02-10"},
+  // Feb 11
+  {n:"Occlusal guard analysis (Cy)",s:"Lab / Technology",d:"2026-02-11",o:"Cy"},
+  {n:"Custom branded hoodies",s:"Marketing / Branding",d:"2026-02-11",o:"Brandy"},
+  {n:"Clinic vs Office branding fix",s:"Marketing / Branding",d:"2026-02-11"},
+  {n:"Custom poly carry bags",s:"Community Outreach",d:"2026-02-11"},
+  {n:"Operatory PC & SharePoint",s:"Software / IT",d:"2026-02-11"},
+  // Feb 12
+  {n:"Multi-device charging station",s:"Equipment / Procurement",d:"2026-02-12"},
+  {n:"CIMEA credential eval (Iowa MS)",s:"Clinical / Training",d:"2026-02-12"},
+  {n:"Oral sedation protocols",s:"Clinical / Training",d:"2026-02-12",o:"Amit"},
+  {n:"Google Drive to SharePoint migration",s:"Software / IT",d:"2026-02-12"},
+  // Feb 13
+  {n:"Dental AI platform evaluation",s:"Software / IT",d:"2026-02-13"},
+  {n:"Intraoral scanner deep comparison",s:"Lab / Technology",d:"2026-02-13",o:"Cy"},
+  {n:"Aligner treatment courses",s:"Clinical / Training",d:"2026-02-13",o:"Amit"},
+  {n:"Employee directory",s:"Admin / HR",d:"2026-02-13",o:"Diane"},
+  {n:"LuxCreo UV curing workflows",s:"Lab / Technology",d:"2026-02-13",o:"Cy"},
+  {n:"CDT certification (Cy)",s:"Lab / Technology",d:"2026-02-13",o:"Cy"},
+  {n:"Pharmacy compounding formulary",s:"Clinical / Training",d:"2026-02-13",o:"Amit"},
+  {n:"Archy medical history setup",s:"Software / IT",d:"2026-02-13"},
+  {n:"Employment verification letter",s:"Admin / HR",d:"2026-02-13",o:"Diane"},
+  {n:"Microsoft update deployment",s:"Software / IT",d:"2026-02-13"},
+  // Feb 14
+  {n:"Team preferences form",s:"Admin / HR",d:"2026-02-14",o:"Diane"},
+  // Feb 23 — milestone (Fix 1: Valantis spelling + Fix 4: milestone flag)
+  {n:"Valantis start date",s:"Strategy / Business",d:"2026-02-23",ms:true,o:"Valantis"},
+  // Mar 1 — milestone
+  {n:"Ana Carillo (DA) start date",s:"Admin / HR",d:"2026-03-01",ms:true,o:"Ana"},
+  // May 1 — milestone
+  {n:"Practice opening target",s:"Strategy / Business",d:"2026-05-01",ms:true,o:"Amit"},
+  // May 15 — milestone
+  {n:"Dr. Maria (Associate) start date",s:"Admin / HR",d:"2026-05-15",ms:true},
+  // June 30 — milestone
+  {n:"Construction completion target",s:"Facility / Construction",d:"2026-06-30",ms:true},
+];
+
+const actions = [
+  // ═══ REGULATORY & COMPLIANCE (Critical Path to May Opening) ═══
+  {t:"IMPACT Practice Enrollment (Group/FAO) — call Tuesday to confirm",detail:"Shows complete. Call Tuesday to confirm status and get certificate.",tags:["Finance / Legal"],p:"urgent",o:"Amit"},
+  {t:"IMPACT Individual Provider Enrollment",detail:"Needs association with practice after Group confirmation.",tags:["Finance / Legal"],p:"urgent",o:"Amit"},
+  {t:"Write HIPAA Privacy Policy",detail:"Official policy on how PHI is used, disclosed, and protected. Covers permitted uses, patient rights, and breach procedures. Required before seeing any patient.",tags:["Admin / HR"],p:"urgent"},
+  {t:"Create Notice of Privacy Practices (NPP)",detail:"Patient-facing document explaining privacy rights and how Schuyler Dental handles their information. Must be handed to every new patient and posted in the office.",tags:["Admin / HR"],p:"urgent"},
+  {t:"Document HIPAA Security Policies",detail:"Administrative, physical, and technical safeguards for ePHI. Covers Archy access controls, password policies, workstation security, encryption, and backup procedures.",tags:["Admin / HR"],p:"urgent"},
+  {t:"Write HIPAA Breach Notification Policy",detail:"Step-by-step protocol if PHI is compromised: who investigates, patient notification, HHS reporting timelines (60 days), and documentation requirements.",tags:["Admin / HR"],p:"urgent"},
+  {t:"Finalize OSHA Exposure Control Plan",detail:"Protect employees from bloodborne pathogens. Covers exposure determination by job title, PPE requirements, sharps disposal, hepatitis B vaccination offer, and post-exposure incident procedures.",tags:["Admin / HR"],p:"urgent",o:"Diane"},
+  {t:"Create OSHA Hazard Communication Program",detail:"Chemical safety program: maintain SDS binder for all chemicals, label secondary containers, document employee training on chemical hazards.",tags:["Admin / HR"],p:"urgent",o:"Diane"},
+  {t:"Write infection control protocols",detail:"SOPs for instrument sterilization, surface disinfection, operatory turnover, waterline maintenance, and hand hygiene per CDC and Illinois requirements.",tags:["Clinical / Training"],p:"urgent"},
+  {t:"Purchase & install commercial firewall",detail:"SonicWall, Sophos, Fortinet, or UniFi. Must be in place before opening for HIPAA compliance. Next step: find out IT contact from Reggie.",tags:["Software / IT"],p:"urgent",o:"Amit"},
+  {t:"Check-in with Jerid — does Ana want to start before March 1?",detail:"Ana Carillo (DA) is set to join March 1. Check with Jerid to see if Ana would prefer an earlier start date.",tags:["Admin / HR"],p:"urgent",o:"Diane"},
+  {t:"Valantis onboarding (Feb 23 start)",detail:"Complete I-9, W-4, system access setup, and orientation before start date.",tags:["Admin / HR"],p:"urgent",o:"Diane"},
+
+  // ═══ REGULATORY — SOON ═══
+  {t:"DentaQuest enrollment",detail:"After IMPACT confirmed, 2-4 weeks processing time.",tags:["Finance / Legal"],p:"soon",o:"Amit"},
+  {t:"MCO Credentialing (Molina, Meridian, Blue Cross Community)",detail:"Can run parallel with other enrollments, 4-8 weeks processing.",tags:["Finance / Legal"],p:"soon",o:"Amit"},
+  {t:"Submit IEMA X-ray equipment registration",detail:"Required by Illinois Emergency Management Agency before operating dental X-ray equipment.",tags:["Finance / Legal"],p:"soon"},
+  {t:"IDES Unemployment Insurance registration",detail:"Register as new employer, get IL unemployment tax account number, set up quarterly wage reporting.",tags:["Finance / Legal"],p:"soon",o:"Diane"},
+  {t:"Develop HIPAA training curriculum",detail:"Training all employees must complete before seeing patients. Covers PHI handling, Archy access rules, breach reporting, patient rights, and annual refresher requirements.",tags:["Clinical / Training"],p:"soon",o:"Diane"},
+  {t:"Develop OSHA training curriculum",detail:"Employee safety training covering bloodborne pathogens, hazard communication, PPE use, emergency procedures, and fire safety. Must be completed before clinical operations.",tags:["Clinical / Training"],p:"soon",o:"Diane"},
+
+  // ═══ INSURANCE ═══
+  {t:"Bind workers' compensation insurance",detail:"Required before staff begin. Confirm carrier, coverage limits, and effective date.",tags:["Finance / Legal"],p:"soon",o:"Amit"},
+  {t:"Bind malpractice insurance",detail:"Professional liability coverage for Dr. Kumar and Dr. Maria. Must be active before seeing patients.",tags:["Finance / Legal"],p:"soon",o:"Amit"},
+  {t:"Bind general liability insurance",detail:"Commercial general liability policy for the practice location.",tags:["Finance / Legal"],p:"soon",o:"Amit"},
+  {t:"Bind property/equipment insurance (effective May 1)",detail:"Coverage for all practice equipment and facility contents.",tags:["Finance / Legal"],p:"soon",o:"Amit"},
+  {t:"Organize certificate of insurance binder",detail:"Compile and organize all insurance certificates in one binder for reference.",tags:["Finance / Legal"],p:"soon",o:"Diane"},
+  {t:"Start medical insurance credentialing (sleep medicine)",detail:"Jan-Feb/Mar timeline. Required before offering sleep medicine services.",tags:["Finance / Legal"],p:"soon",o:"Amit"},
+
+  // ═══ HR & ONBOARDING ═══
+  {t:"Ana Carillo onboarding (Mar 1 start)",detail:"Complete I-9, W-4, system access, and orientation before start date.",tags:["Admin / HR"],p:"soon",o:"Diane"},
+  {t:"Run first payroll (dry run)",detail:"Internal test payroll cycle in February to verify tax withholdings, direct deposits, and pay stubs.",tags:["Finance / Legal"],p:"soon",o:"Diane"},
+  {t:"Dr. Maria onboarding (May 15 start)",detail:"Start date May 15. IMPACT individual enrollment and practice association needed. Complete I-9, W-4, credentialing.",tags:["Admin / HR"],p:"upcoming",o:"Diane"},
+  {t:"Staff photography and headshots",detail:"Schedule team photos for website and marketing. Deadline May 15.",tags:["Marketing / Branding"],p:"upcoming",o:"Brandy"},
+
+  // ═══ EQUIPMENT (Pending Delivery/Order) ═══
+  {t:"Planmeca G7 CBCT — installation pending",detail:"Installation coordination needed.",tags:["Equipment / Procurement"],p:"soon"},
+  {t:"A-dec dental chairs — delivery tracking",detail:"Track delivery status and schedule installation.",tags:["Equipment / Procurement"],p:"soon"},
+  {t:"iMill — on its way",detail:"In transit to practice.",tags:["Equipment / Procurement"],p:"soon",o:"Cy"},
+  {t:"2x Nomad portable X-rays",detail:"Goetze has them, on their way to us now.",tags:["Equipment / Procurement"],p:"soon"},
+  {t:"Air compressor — pending",detail:"Order/delivery needed for operatory air supply.",tags:["Equipment / Procurement"],p:"soon"},
+  {t:"Vacuum system — pending",detail:"Order/delivery needed for operatory suction.",tags:["Equipment / Procurement"],p:"soon"},
+  {t:"Sterilization equipment — pending",detail:"Order/delivery needed before opening.",tags:["Equipment / Procurement"],p:"soon"},
+  {t:"Order amalgam separator",detail:"EPA required for dental offices discharging to public sewer. Must be installed before opening.",tags:["Equipment / Procurement"],p:"soon"},
+  {t:"Yomi robotic surgical system — training coordination",detail:"Coordinate training schedule with vendor.",tags:["Equipment / Procurement"],p:"upcoming",o:"Amit"},
+  {t:"QuickSleeper 5 — paid 11/03, training May 8",detail:"Paid. In-office full-day training scheduled May 8.",tags:["Equipment / Procurement"],p:"upcoming"},
+  {t:"LuxCreo iLux Pro #2 — on hold until May",detail:"Second unit on hold until May opening.",tags:["Equipment / Procurement"],p:"upcoming",o:"Cy"},
+
+  // ═══ FACILITY ═══
+  {t:"Construction — E/W brick walls done; on track for end of June",detail:"East and west side brick walls complete. Full construction completion targeted end of June.",tags:["Facility / Construction"],p:"soon"},
+  {t:"Sign medical waste / biohazard pickup contract",detail:"Regulated medical waste pickup contract required before treating patients.",tags:["Facility / Construction"],p:"soon"},
+  {t:"Amalgam separator installation",detail:"Install after separator is ordered and delivered. Must be operational before opening.",tags:["Facility / Construction"],p:"upcoming"},
+  {t:"Order and post required workplace posters",detail:"Federal (DOL, EEOC, OSHA) and Illinois state workplace posters. Must be displayed before employees start.",tags:["Admin / HR"],p:"soon"},
+
+  // ═══ FINANCIAL ═══
+  {t:"401(k) finalization with Empower/Tom Mantych",detail:"Empower selected at ~$3,250/yr. Finalize enrollment and setup steps with Tom Mantych.",tags:["Finance / Legal"],p:"upcoming",o:"Amit"},
+  {t:"DMPO registration (BoomCloud membership plan)",detail:"Register if going with BoomCloud for in-house membership plan.",tags:["Strategy / Business"],p:"upcoming",o:"Amit"},
+
+  // ═══ TRAINING (Pre-Opening) ═══
+  {t:"Complete Planmeca pre-training videos",detail:"Vimeo videos + quiz for CE credit. In-office imaging training targets May.",tags:["Clinical / Training"],p:"soon"},
+  {t:"Cy CDT certification path — call NBC (800) 684-5310",detail:"Call NBC to start Certified Dental Technician certification process.",tags:["Lab / Technology"],p:"soon",o:"Cy"},
+  {t:"Cy Exocad Cohort 23 completion",detail:"Weekly Mon/Fri sessions through March 6, 2026.",tags:["Lab / Technology"],p:"soon",o:"Cy"},
+  {t:"Cy digital lab SOPs development",detail:"Document standard operating procedures for the digital lab workflow.",tags:["Lab / Technology"],p:"upcoming",o:"Cy"},
+  {t:"Schedule uLab Lunch & Learn",detail:"Contact Evan Grzelak to lock in date for Feb/March.",tags:["Clinical / Training"],p:"soon"},
+  {t:"Dr. Maria CE courses",detail:"May-June or fall 2026 timeline.",tags:["Clinical / Training"],p:"upcoming"},
+  {t:"Register for ILAPEO Brazil course + tourist visa",detail:"'Full Arches with Immediate Loading' June 22-26, 2026. Code: 29161KUMAR. Visa process starts April 10.",tags:["Clinical / Training"],p:"upcoming",o:"Amit"},
+  {t:"Schedule Planmeca in-office training",detail:"Target May 2026 after pre-training videos are complete.",tags:["Clinical / Training"],p:"upcoming"},
+
+  // ═══ MARKETING & LAUNCH ═══
+  {t:"Design & print Teddy Bear Clinic materials",detail:"Intake forms, diagnosis cards, branded stickers, goody bag contents. Event March 2026.",tags:["Community Outreach"],p:"soon",o:"Brandy"},
+  {t:"Custom branded hoodies (20 pieces)",detail:"Confirm order status.",tags:["Marketing / Branding"],p:"soon",o:"Brandy"},
+  {t:"Sticker printing setup (Epson EcoTank + Cricut)",detail:"Set up in-house sticker printing capability.",tags:["Marketing / Branding"],p:"soon",o:"Brandy"},
+  {t:"n8n automation developer brief",detail:"9 workflows identified. Create developer brief for implementation.",tags:["Software / IT"],p:"upcoming"},
+  {t:"Google review funnel setup",detail:"Set up automated review request flow for patients post-visit.",tags:["Marketing / Branding"],p:"upcoming",o:"Brandy"},
+
+  // ═══ IT & SYSTEMS ═══
+  {t:"Microsoft 365 / Intune device enrollment",detail:"Enroll all operatory PCs in Intune for device management.",tags:["Software / IT"],p:"soon"},
+  {t:"SharePoint folder permissions",detail:"Set permissions before going live. Required before staff access shared files.",tags:["Software / IT"],p:"soon"},
+  {t:"ScanSnap reconfiguration to SharePoint",detail:"Redirect scanning to SharePoint instead of local/Google Drive.",tags:["Software / IT"],p:"soon"},
+  {t:"Archy new onboarding meeting",detail:"Schedule setup/onboarding meeting with Archy team for final configuration.",tags:["Software / IT"],p:"soon"},
+  {t:"Mango Voice — verify text/SMS functional",detail:"Phones arrived and working. Verify text/SMS capability is operational.",tags:["Software / IT"],p:"soon"},
+
+  // ═══ ON TRACK / COMPLETED ═══
+  {t:"W-9 Certification",detail:"Completed.",tags:["Finance / Legal"],p:"done",o:"Amit"},
+  {t:"IMPACT Practice Enrollment (Group/FAO) — shows complete",detail:"Shows complete in system. Pending Tuesday confirmation call.",tags:["Finance / Legal"],p:"done",o:"Amit"},
+  {t:"Billboard production (Lamar — Rushville & Beardstown)",detail:"Three sides secured. Payment processed, production started. Completed 1st week of Feb 2026.",tags:["Marketing / Branding"],p:"done",o:"Brandy"},
+  {t:"Configure TP-Link router for Mango Voice",detail:"Disabled SIP ALG, RTSP ALG, and related settings for VoIP reliability.",tags:["Software / IT"],p:"done"},
+  {t:"Send revised employee handbook to attorney",detail:"Handbook revised Jan 20. Approved through LegalShield.",tags:["Admin / HR"],p:"done",o:"Diane"},
+  {t:"401(k) plan selected (Empower)",detail:"Selected. 3% safe harbor match, ~$3,200 annual fees, $4,000 tax credit potential.",tags:["Finance / Legal"],p:"done",o:"Amit"},
+  {t:"Anthropic nonprofit program",detail:"Completed via Goodstack/SCMHA verification.",tags:["Software / IT"],p:"done"},
+  {t:"IBCCES Autism certification",detail:"In process with Danielle Terrell since Jan 14.",tags:["Clinical / Training"],p:"done",o:"Amit"},
+  {t:"NSync Dental supply partnership",detail:"Discussed with Dr. Chaudhry Jan 13. Not moving forward at this time.",tags:["Strategy / Business"],p:"done"},
+  {t:"Mango Voice texting registration",detail:"Signed 01/14/2026.",tags:["Software / IT"],p:"done"},
+  {t:"Teddy Bear Clinic planning meeting",detail:"Held Feb 9 at Schuyler Industry Middle School. Event targeting March.",tags:["Community Outreach"],p:"done",o:"Brandy"},
+  {t:"Zimbis inventory system ($120K)",detail:"Pricing confirmed at $120K. Meeting held Feb 2 with Louis Visser.",tags:["Equipment / Procurement"],p:"done"},
+  {t:"Interior finishes selected",detail:"Cabinet trim, Stericenter colors, upholstery, desk heights confirmed.",tags:["Facility / Construction"],p:"done"},
+  {t:"Archy Platinum active",detail:"Practice management system live and paid.",tags:["Software / IT"],p:"done"},
+  {t:"Mango Voice — phones arrived and working",detail:"VoIP phones delivered and operational.",tags:["Software / IT"],p:"done"},
+];
+
+const meetings = [
+  {t:"Overjet Demo",detail:"Meeting with Lauren and Amit.",date:"2026-02-15",time:"10:30 AM - 11:15 AM",day:"Sun"},
+  {t:"Exocad Cohort 23 (One/One) - Cy Walden",detail:"Weekly on Mondays and Fridays, 1:00 PM - 4:00 PM through March 6, 2026.",date:"2026-02-16",time:"1:00 PM - 4:00 PM",day:"Mon/Fri",recurring:true},
+  {t:"Board Meeting",detail:"",date:"2026-02-18",time:"11:00 AM - 12:00 PM",day:"Wed"},
+  {t:"Bart and Erik In-office Visit",detail:"",date:"2026-02-24",time:"9:30 AM - 10:30 AM",day:"Tue"},
+  {t:"Teddy Bear Clinic",detail:"At Webster School.",date:"2026-03-12",time:"5:00 PM - 7:00 PM",day:"Thu"},
+  {t:"Quicksleeper5 Training",detail:"In-office, full day.",date:"2026-05-08",time:"9:00 AM - 5:00 PM",day:"Fri"},
+  {t:"ILAPEO: Full Arches with Immediate Loading",detail:"Hands-on course in Curitiba, Brazil. Arrive by 2:00 PM on June 22 for welcome dinner.",date:"2026-06-23",time:"June 23-26, 2026",day:"Tue-Fri"},
+];
+
+const travel = [
+  {t:"LMT Lab Day / Midwinter Chicago",detail:"Wednesday, February 18 - Saturday, February 21, 2026.",date:"2026-02-18",end:"2026-02-21",hotel:"Bluegreen Vacations Hotel Blake, check-in Feb 18, check-out Feb 22."},
+];
+
+const sectorCfg = {
+  "Clinical / Training":     {c:"#60A5FA"},
+  "Lab / Technology":        {c:"#4ECDC4"},
+  "Software / IT":           {c:"#A78BFA"},
+  "Admin / HR":              {c:"#F97316"},
+  "Marketing / Branding":    {c:"#FF6B6B"},
+  "Equipment / Procurement": {c:"#FBBF24"},
+  "Finance / Legal":         {c:"#34D399"},
+  "Strategy / Business":     {c:"#F472B6"},
+  "Facility / Construction": {c:"#FB923C"},
+  "Community Outreach":      {c:"#38BDF8"},
+};
+
+const priorityCfg = {
+  urgent:  {label:"URGENT - Do Now",bg:"#7F1D1D50",border:"#EF4444",text:"#FCA5A5"},
+  soon:    {label:"COMING UP - Feb/March",bg:"#78350F40",border:"#F59E0B",text:"#FCD34D"},
+  upcoming:{label:"UPCOMING - April-June",bg:"#1E3A5F40",border:"#3B82F6",text:"#93C5FD"},
+  done:    {label:"ON TRACK / COMPLETED",bg:"#14532D40",border:"#22C55E",text:"#86EFAC"},
+};
+
+let selectedSector = null;
+let selectedOwner = null;
+let currentView = "actions";
+let searchQuery = "";
+
+/* Fix 6: load checkbox state from localStorage */
+let checkedItems = {};
+try { checkedItems = JSON.parse(localStorage.getItem("sd-tracker-checks")||"{}"); } catch(e){}
+function saveChecks(){ try { localStorage.setItem("sd-tracker-checks",JSON.stringify(checkedItems)); } catch(e){} }
+
+/* Fix 8: collect unique owners */
+const allOwners = [...new Set([...tasks.map(t=>t.o),...actions.map(a=>a.o)].filter(Boolean))].sort();
+
+const allDates = [...new Set(tasks.map(t=>t.d))].sort();
+const sectorCounts = {};
+tasks.forEach(t => { sectorCounts[t.s] = (sectorCounts[t.s]||0)+1; });
+const sortedSectors = Object.entries(sectorCfg).sort((a,b) => (sectorCounts[b[0]]||0) - (sectorCounts[a[0]]||0));
+
+function fmt(d){return new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}
+function fmtShort(d){return new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"numeric",day:"numeric"})}
+function weekday(d){return new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"short"})}
+
+/* Fix 11: text search matching */
+function matchSearch(text){
+  if(!searchQuery) return true;
+  return text.toLowerCase().includes(searchQuery);
+}
+
+function getFiltered(){
+  let list = tasks;
+  if(selectedSector) list = list.filter(t=>t.s===selectedSector);
+  if(selectedOwner) list = list.filter(t=>t.o===selectedOwner);
+  if(searchQuery) list = list.filter(t=>matchSearch(t.n)||matchSearch(t.s)||(t.o&&matchSearch(t.o)));
+  return list;
+}
+
+/* Fix 10: sector filters now shown on actions view too */
+function renderFilters(){
+  const el=document.getElementById("filter-wrap");
+  const actionSectorCounts = {};
+  actions.forEach(a=>{ a.tags.forEach(tag=>{ actionSectorCounts[tag]=(actionSectorCounts[tag]||0)+1; }); });
+
+  const counts = currentView==="actions" ? actionSectorCounts : sectorCounts;
+  const total = currentView==="actions" ? actions.length : tasks.length;
+
+  let h=`<button class="filter-btn ${!selectedSector?'active':''}" onclick="selectSector(null)">All (${total})</button>`;
+  sortedSectors.forEach(([name,cfg])=>{
+    const active=selectedSector===name;
+    const count=counts[name]||0;
+    if(!count) return;
+    const style=active?`border-color:${cfg.c}44;background:${cfg.c}18;color:${cfg.c}`:'';
+    h+=`<button class="filter-btn ${active?'active':''}" style="${style}" onclick="selectSector('${name}')">`;
+    h+=`<span class="dot" style="background:${cfg.c};opacity:${active?1:0.5}"></span>`;
+    h+=`${name} (${count})</button>`;
+  });
+  el.innerHTML=h;
+}
+
+/* Fix 8: owner filter bar */
+function renderOwnerFilter(){
+  const wrap=document.getElementById("owner-filter-wrap");
+  if(!allOwners.length){wrap.className="owner-filters hidden";return;}
+  wrap.className="owner-filters";
+  let h=`<button class="owner-btn ${!selectedOwner?'active':''}" onclick="selectOwner(null)">All owners</button>`;
+  allOwners.forEach(o=>{
+    h+=`<button class="owner-btn ${selectedOwner===o?'active':''}" onclick="selectOwner('${o}')">${o}</button>`;
+  });
+  wrap.innerHTML=h;
+}
+
+function renderActions(){
+  const filteredActions = actions.filter(a=>{
+    if(selectedSector && !a.tags.includes(selectedSector)) return false;
+    if(selectedOwner && a.o !== selectedOwner) return false;
+    if(searchQuery && !matchSearch(a.t) && !matchSearch(a.detail) && !a.tags.some(t=>matchSearch(t)) && !(a.o && matchSearch(a.o))) return false;
+    return true;
+  });
+
+  let h='';
+  ["urgent","soon","upcoming","done"].forEach(p=>{
+    const items=filteredActions.filter(a=>a.p===p);
+    if(!items.length) return;
+    const cfg=priorityCfg[p];
+    h+=`<div class="priority-group">`;
+    h+=`<div class="priority-header"><span class="priority-badge" style="background:${cfg.bg};color:${cfg.text};border:1px solid ${cfg.border}30">${cfg.label}</span>`;
+    h+=`<span class="priority-count">${items.length} items</span></div>`;
+    items.forEach((item,i)=>{
+      const key=p+'-'+actions.indexOf(item);
+      const checked=checkedItems[key];
+      h+=`<div class="action-item">`;
+      h+=`<div class="action-check ${checked?'checked':''}" onclick="toggleCheck('${key}')"></div>`;
+      h+=`<div class="action-body">`;
+      h+=`<div class="action-title ${checked?'done':''}">${item.t}</div>`;
+      h+=`<div class="action-detail">${item.detail}</div>`;
+      h+=`<div class="action-tags">`;
+      item.tags.forEach(tag=>{
+        const tc=(sectorCfg[tag]||{c:'#888'}).c;
+        h+=`<span class="action-tag" style="background:${tc}20;color:${tc}">${tag}</span>`;
+      });
+      if(item.o) h+=`<span class="action-owner-tag">${item.o}</span>`;
+      h+=`</div></div></div>`;
+    });
+    h+=`</div>`;
+  });
+  document.getElementById("actions-view").innerHTML=h;
+}
+
+function renderCalendar(){
+  const filteredMeetings = meetings.filter(m=>{
+    if(searchQuery && !matchSearch(m.t) && !matchSearch(m.detail)) return false;
+    return true;
+  });
+  const filteredTravel = travel.filter(t=>{
+    if(searchQuery && !matchSearch(t.t) && !matchSearch(t.detail)) return false;
+    return true;
+  });
+
+  let h='';
+  // Meetings & Training
+  h+=`<div class="cal-section">`;
+  h+=`<div class="cal-section-header"><span class="cal-icon">📅</span> Meetings &amp; Training</div>`;
+  filteredMeetings.forEach(m=>{
+    const d=new Date(m.date+"T12:00:00");
+    const mon=d.toLocaleDateString("en-US",{month:"short"}).toUpperCase();
+    const day=d.getDate();
+    h+=`<div class="cal-event meeting">`;
+    h+=`<div class="cal-date-badge"><div class="cal-month">${mon}</div><div class="cal-day">${day}</div><div class="cal-weekday">${m.day}</div></div>`;
+    h+=`<div class="cal-body"><div class="cal-title">${m.t}${m.recurring?'<span class="cal-recurring">RECURRING</span>':''}</div>`;
+    h+=`<div class="cal-time">${m.time}</div>`;
+    if(m.detail)h+=`<div class="cal-detail">${m.detail}</div>`;
+    h+=`</div></div>`;
+  });
+  h+=`</div>`;
+  // Travel & Conferences
+  h+=`<div class="cal-section">`;
+  h+=`<div class="cal-section-header"><span class="cal-icon">✈️</span> Travel &amp; Conferences</div>`;
+  filteredTravel.forEach(t=>{
+    const d=new Date(t.date+"T12:00:00");
+    const mon=d.toLocaleDateString("en-US",{month:"short"}).toUpperCase();
+    const day=d.getDate();
+    h+=`<div class="cal-event travel">`;
+    h+=`<div class="cal-date-badge"><div class="cal-month">${mon}</div><div class="cal-day">${day}</div><div class="cal-weekday"></div></div>`;
+    h+=`<div class="cal-body"><div class="cal-title">${t.t}</div>`;
+    h+=`<div class="cal-detail">${t.detail}</div>`;
+    if(t.hotel)h+=`<div class="cal-hotel">🏨 ${t.hotel}</div>`;
+    h+=`</div></div>`;
+  });
+  h+=`</div>`;
+  document.getElementById("calendar-view").innerHTML=h;
+}
+
+function renderTimeline(){
+  const filtered=getFiltered();
+  let h='';
+  allDates.forEach(date=>{
+    const dayTasks=filtered.filter(t=>t.d===date);
+    if(!dayTasks.length)return;
+    /* Fix 3: dynamic today check */
+    const isToday=date===TODAY;
+    h+=`<div class="day-group"><div class="day-header">`;
+    h+=`<span class="day-date ${isToday?'today':''}">${fmt(date)}</span>`;
+    h+=`<span class="day-weekday">${weekday(date)}</span>`;
+    h+=`<span class="day-count">${dayTasks.length}</span>`;
+    h+=`<div class="day-line"></div></div>`;
+    dayTasks.forEach(t=>{
+      const cfg=sectorCfg[t.s]||{c:"#888"};
+      /* Fix 4-5: milestone row class */
+      const isMilestone = t.ms;
+      h+=`<div class="task-row${isMilestone?' milestone':''}">`;
+      h+=`<span class="task-dot" style="background:${cfg.c}"></span>`;
+      h+=`<span class="task-name">${t.n}</span>`;
+      /* Fix 4-5: milestone badge */
+      if(isMilestone) h+=`<span class="task-ms">MILESTONE</span>`;
+      if(t.em)h+=`<span class="task-new">EMAIL</span>`;
+      /* Fix 7: status badge */
+      const st=taskStatus(t);
+      h+=`<span class="task-status st-${st}">${st.replace("-"," ")}</span>`;
+      /* Fix 8: owner badge */
+      if(t.o) h+=`<span class="task-owner">${t.o}</span>`;
+      h+=`<span class="task-sector" style="color:${cfg.c}">${t.s}</span>`;
+      h+=`</div>`;
+    });
+    h+=`</div>`;
+  });
+  document.getElementById("timeline-view").innerHTML=h;
+}
+
+function renderSummary(){
+  const filtered=getFiltered();
+  const dailyCounts={};
+  filtered.forEach(t=>{dailyCounts[t.d]=(dailyCounts[t.d]||0)+1});
+  const maxD=Math.max(...Object.values(dailyCounts),1);
+
+  /* Fix 12: wrap heatmap in scrollable container */
+  let h=`<div class="section-title">Daily Activity</div><div class="heatmap-wrap"><div class="heatmap">`;
+  allDates.forEach(d=>{
+    const c=dailyCounts[d]||0;
+    const intensity=c/maxD;
+    const bg=c>0?`rgba(96,165,250,${(0.15+intensity*0.7).toFixed(2)})`:'rgba(255,255,255,0.02)';
+    h+=`<div class="heat-cell"><div class="heat-box" style="background:${bg};color:${c>0?'#F8FAFC':'#334155'}">${c||''}</div><span class="heat-label">${fmtShort(d)}</span></div>`;
+  });
+  h+=`</div></div>`;
+
+  h+=`<div class="section-title">By Sector</div>`;
+  const fCounts={};
+  filtered.forEach(t=>{fCounts[t.s]=(fCounts[t.s]||0)+1});
+  sortedSectors.forEach(([name,cfg])=>{
+    const count=fCounts[name]||0;
+    if(!count&&selectedSector)return;
+    const pct=(count/filtered.length)*100;
+    h+=`<div class="bar-row"><span class="bar-label">${name}</span>`;
+    h+=`<div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:linear-gradient(90deg,${cfg.c}88,${cfg.c}55)"></div></div>`;
+    h+=`<span class="bar-count" style="color:${cfg.c}">${count}</span></div>`;
+  });
+
+  const activeDays=allDates.filter(d=>(dailyCounts[d]||0)>0).length;
+  h+=`<div class="stats">`;
+  [{l:"Total Tasks",v:filtered.length},{l:"Sectors",v:Object.keys(fCounts).filter(k=>fCounts[k]>0).length},{l:"Active Days",v:activeDays},{l:"Avg/Day",v:(filtered.length/Math.max(activeDays,1)).toFixed(1)},{l:"Peak Day",v:maxD}].forEach(s=>{
+    h+=`<div class="stat"><div class="stat-value">${s.v}</div><div class="stat-label">${s.l}</div></div>`;
+  });
+  h+=`</div>`;
+  document.getElementById("summary-view").innerHTML=h;
+}
+
+function render(){
+  const filtered=getFiltered();
+  const total=currentView==="actions"?`${actions.length} action items + ${tasks.length} completed tasks`:currentView==="calendar"?`${meetings.length} meetings · ${travel.length} trip`:`${filtered.length} tasks · Jan 2 - Mar 1, 2026`;
+  document.getElementById("subtitle").textContent=total;
+  renderFilters();renderOwnerFilter();renderActions();renderCalendar();renderTimeline();renderSummary();
+  document.getElementById("actions-view").className=currentView==="actions"?"":"hidden";
+  document.getElementById("calendar-view").className=currentView==="calendar"?"":"hidden";
+  document.getElementById("timeline-view").className=currentView==="timeline"?"":"hidden";
+  document.getElementById("summary-view").className=currentView==="summary"?"":"hidden";
+  ["actions","calendar","timeline","summary"].forEach(v=>{
+    document.getElementById("btn-"+v).className="view-btn"+(currentView===v?" active":"");
+  });
+}
+
+window.selectSector=function(s){selectedSector=s;render()};
+window.selectOwner=function(o){selectedOwner=o;render()};
+window.setView=function(v){currentView=v;render()};
+/* Fix 6: persist checkbox to localStorage */
+window.toggleCheck=function(key){checkedItems[key]=!checkedItems[key];saveChecks();renderActions()};
+/* Fix 11: search handler */
+window.onSearch=function(){searchQuery=document.getElementById("search-input").value.trim().toLowerCase();render()};
+
+render();
+</script>
+</body>
+</html>
