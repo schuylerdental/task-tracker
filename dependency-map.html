@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=3.0">
+<title>Schuyler Dental — Progress Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:#0B0D11;color:#E2E8F0;min-height:100vh;overflow:hidden;user-select:none;-webkit-user-select:none}
+
+.risk-banner{position:fixed;top:0;left:0;right:0;z-index:100;padding:8px 16px;background:rgba(127,29,29,0.4);border-bottom:2px solid #EF4444;display:flex;align-items:center;gap:10px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.risk-banner .risk-icon{width:20px;height:20px;background:#EF4444;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0}
+.risk-banner .risk-text{font-size:11px;font-weight:600;color:#FCA5A5;letter-spacing:0.03em}
+.risk-banner .risk-label{color:#EF4444;font-weight:800;margin-right:4px}
+
+.controls{position:fixed;top:40px;left:0;right:0;z-index:90;padding:8px 16px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:rgba(11,13,17,0.85);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-bottom:1px solid rgba(255,255,255,0.04)}
+.ctrl-btn{padding:4px 10px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:#94A3B8;font-family:inherit;transition:all 0.15s}
+.ctrl-btn:hover{background:rgba(255,255,255,0.08);color:#F8FAFC}
+.ctrl-btn.active{background:rgba(96,165,250,0.15);border-color:rgba(96,165,250,0.3);color:#60A5FA}
+.ctrl-title{font-size:11px;font-weight:700;color:#64748B;margin-right:auto;letter-spacing:0.04em}
+
+.map-container{position:fixed;top:0;left:0;right:0;bottom:0;overflow:hidden;cursor:grab}
+.map-container.grabbing{cursor:grabbing}
+.map-container svg{width:100%;height:100%;display:block}
+
+.tooltip{position:fixed;z-index:200;pointer-events:none;padding:10px 14px;background:rgba(15,17,23,0.95);border:1px solid rgba(255,255,255,0.12);border-radius:8px;max-width:320px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);opacity:0;transition:opacity 0.15s;font-size:11px}
+.tooltip.visible{opacity:1}
+.tooltip .tt-name{font-size:12px;font-weight:700;color:#F8FAFC;margin-bottom:4px}
+.tooltip .tt-detail{font-size:10px;color:#94A3B8;line-height:1.4;margin-bottom:6px}
+.tooltip .tt-status{display:inline-block;padding:2px 8px;border-radius:3px;font-size:9px;font-weight:700;letter-spacing:0.03em}
+.tooltip .tt-status.done{background:rgba(34,197,94,0.2);color:#34D399}
+.tooltip .tt-status.in-progress{background:rgba(96,165,250,0.2);color:#60A5FA}
+.tooltip .tt-status.not-started{background:rgba(255,255,255,0.08);color:#94A3B8}
+.tooltip .tt-date{font-size:9px;color:#64748B;margin-top:4px}
+.tooltip .tt-dep{font-size:9px;color:#FBBF24;margin-top:4px;font-weight:500}
+.tooltip .tt-risk{font-size:9px;color:#EF4444;font-weight:600;margin-top:4px}
+
+.legend{position:fixed;bottom:16px;left:16px;z-index:90;padding:12px 16px;background:rgba(15,17,23,0.92);border:1px solid rgba(255,255,255,0.08);border-radius:8px;font-size:10px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);max-width:220px;transition:opacity 0.2s,transform 0.2s;transform-origin:bottom left}
+.legend.hidden{opacity:0;transform:scale(0.9);pointer-events:none}
+.legend-title{font-size:11px;font-weight:700;color:#94A3B8;margin-bottom:8px;letter-spacing:0.04em}
+.legend-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.legend-line{width:20px;height:0;border-top:2px solid;flex-shrink:0}
+.legend-label{color:#CBD5E1;font-size:10px}
+
+.stats-panel{position:fixed;top:80px;right:16px;z-index:90;padding:14px 18px;background:rgba(15,17,23,0.92);border:1px solid rgba(255,255,255,0.08);border-radius:10px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);min-width:200px}
+.stats-title{font-size:10px;font-weight:700;color:#64748B;letter-spacing:0.06em;margin-bottom:8px}
+.stats-bar-container{width:100%;height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;margin-bottom:6px}
+.stats-bar{height:100%;background:linear-gradient(90deg,#34D399,#60A5FA);border-radius:4px;transition:width 0.5s ease}
+.stats-pct{font-size:22px;font-weight:800;color:#F8FAFC;margin-bottom:4px}
+.stats-counts{font-size:10px;color:#94A3B8;line-height:1.6}
+.stats-counts span{font-weight:700}
+.stats-counts .done-c{color:#34D399}
+.stats-counts .ip-c{color:#60A5FA}
+.stats-counts .ns-c{color:#64748B}
+
+svg text{font-family:'DM Sans',sans-serif}
+
+@keyframes risk-pulse{
+  0%,100%{stroke-opacity:0.15;stroke-width:3}
+  50%{stroke-opacity:0.5;stroke-width:6}
+}
+@keyframes gate-glow{
+  0%,100%{filter:drop-shadow(0 0 4px var(--gc))}
+  50%{filter:drop-shadow(0 0 12px var(--gc))}
+}
+.spoke-content{opacity:0;transform-origin:center;transition:opacity 0.3s ease}
+.spoke-content.expanded{opacity:1}
+/* dep-line styles removed */
+
+.gate-hex{transition:filter 0.3s}
+.risk-ring{animation:risk-pulse 2.5s ease-in-out infinite}
+
+@media(max-width:768px){
+  .risk-banner{padding:6px 12px}
+  .risk-banner .risk-text{font-size:10px}
+  .controls{top:34px;padding:6px 12px}
+  .legend{bottom:10px;left:10px;padding:10px 12px}
+}
+</style>
+</head>
+<body>
+
+<div class="risk-banner">
+  <div class="risk-icon">!</div>
+  <div class="risk-text"><span class="risk-label">TOP RISK:</span> Construction completion end of June vs. July opening target. Construction gates all equipment installation. Single biggest unresolved schedule conflict.</div>
+</div>
+
+<div class="controls">
+  <span class="ctrl-title">PROGRESS TRACKER</span>
+  <button class="ctrl-btn" onclick="expandAll()">Expand All</button>
+  <button class="ctrl-btn" onclick="collapseAll()">Collapse All</button>
+  <button class="ctrl-btn" onclick="resetView()">Reset View</button>
+  <button class="ctrl-btn" onclick="toggleLegend()">Legend</button>
+</div>
+
+<div class="map-container" id="map-container">
+  <svg id="map" xmlns="http://www.w3.org/2000/svg"></svg>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<div class="stats-panel" id="stats-panel">
+  <div class="stats-title">OVERALL PROGRESS</div>
+  <div class="stats-bar-container"><div class="stats-bar" id="stats-bar"></div></div>
+  <div class="stats-pct" id="stats-pct">0%</div>
+  <div class="stats-counts" id="stats-counts"></div>
+</div>
+
+<div class="legend" id="legend">
+  <div class="legend-title">STATUS</div>
+  <div class="legend-row"><div class="legend-dot" style="background:#34D399"></div><div class="legend-label">Done</div></div>
+  <div class="legend-row"><div class="legend-dot" style="background:#60A5FA"></div><div class="legend-label">In Progress</div></div>
+  <div class="legend-row"><div class="legend-dot" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.2)"></div><div class="legend-label">Not Started</div></div>
+  <div class="legend-title" style="margin-top:10px">ELEMENTS</div>
+  <div class="legend-row"><div class="legend-dot" style="background:#EF4444"></div><div class="legend-label">Risk Flag</div></div>
+  <div class="legend-row"><div style="width:16px;height:16px;background:rgba(239,68,68,0.15);border:1.5px solid #EF4444;clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);flex-shrink:0"></div><div class="legend-label">Gate Checkpoint</div></div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   DATA MODEL
+   ══════════════════════════════════════════════════════════════ */
+
+const SPOKES = [
+  { id:"building", label:"THE BUILDING", sub:"Physical Space + Infrastructure", color:"#FB923C",
+    branches:[
+      { id:"construction", label:"Construction", tasks:[
+        {id:"b-c-1",name:"E/W brick walls",status:"DONE"},
+        {id:"b-c-2",name:"Remaining construction",status:"IN_PROGRESS",target:"End of June",risk:true,critical:false},
+        {id:"b-c-3",name:"Interior finishes selected",status:"DONE"},
+        {id:"b-c-4",name:"Lab furniture layout approved",status:"DONE"},
+      ]},
+      { id:"utilities", label:"Utilities + Plumbing", tasks:[
+        {id:"b-u-1",name:"Air compressor",status:"NOT_STARTED",detail:"Delivery + install; powers handpieces",blocked:"b-c-2"},
+        {id:"b-u-2",name:"Vacuum system",status:"NOT_STARTED",detail:"Delivery + install; powers suction",blocked:"b-c-2"},
+        {id:"b-u-3",name:"Nitrous oxide plumbing",status:"NOT_STARTED",detail:"Verify install + gas supply + scavenging",blocked:"b-c-2"},
+        {id:"b-u-4",name:"Amalgam separator",status:"NOT_STARTED",detail:"Order + install + connect to wastewater",blocked:"b-c-2"},
+      ]},
+      { id:"env-compliance", label:"Environmental", tasks:[
+        {id:"b-e-1",name:"Medical waste pickup contract",status:"NOT_STARTED",detail:"Sign and activate before first patient"},
+      ]},
+      { id:"equip-furnish", label:"Equipment & Furnishings", tasks:[
+        {id:"b-ef-1",name:"Samsung Odyssey monitors",status:"DONE",detail:"Selected Feb 6"},
+        {id:"b-ef-2",name:"Medical-grade keyboards & mice",status:"DONE",detail:"Selected Feb 8"},
+        {id:"b-ef-3",name:"Multi-device charging stations",status:"DONE",detail:"Selected Feb 12"},
+        {id:"b-ef-4",name:"French door refrigerator",status:"DONE",detail:"Analyzed Feb 9"},
+        {id:"b-ef-5",name:"Air purifier selection",status:"DONE",detail:"Selected Feb 10"},
+        {id:"b-ef-6",name:"Monitor & ambient lighting plan",status:"DONE",detail:"Feb 1"},
+        {id:"b-ef-7",name:"Zimbis cabinet system ($120K)",status:"IN_PROGRESS",detail:"Meeting held Feb 2 with Louis Visser"},
+        {id:"b-ef-8",name:"Patterson instruments list",status:"DONE",detail:"Jan 27"},
+        {id:"b-ef-9",name:"Dental camera evaluation",status:"DONE",detail:"Jan 19"},
+        {id:"b-ef-10",name:"Photography lightbox selection",status:"DONE",detail:"Jan 19"},
+      ]},
+      { id:"facility-ops", label:"Facility Operations", tasks:[
+        {id:"b-fo-1",name:"Steel framing construction Q&A",status:"DONE",detail:"Jan 17"},
+        {id:"b-fo-2",name:"Trane air handler troubleshooting",status:"DONE",detail:"Jan 18"},
+        {id:"b-fo-3",name:"Goetze Dental status check",status:"DONE",detail:"Feb 5"},
+        {id:"b-fo-4",name:"Workplace posters ordered & posted",status:"NOT_STARTED",detail:"Federal (DOL, EEOC, OSHA) and Illinois state posters"},
+        {id:"b-fo-5",name:"Temporary SDF facility setup",status:"DONE",detail:"Feb 10; code D1354"},
+      ]},
+    ]
+  },
+  { id:"team", label:"THE TEAM", sub:"Personnel + Onboarding", color:"#F97316",
+    branches:[
+      { id:"active-staff", label:"Active Staff", tasks:[
+        {id:"t-a-1",name:"Dr. Amit — Owner / Dentist",status:"DONE"},
+        {id:"t-a-2",name:"Brandy — Office Manager",status:"DONE"},
+        {id:"t-a-3",name:"Diane — Lead DA",status:"DONE"},
+        {id:"t-a-4",name:"Cy — Lab Technician",status:"DONE"},
+        {id:"t-a-5",name:"Skylar — Dental Assistant",status:"DONE"},
+      ]},
+      { id:"incoming", label:"Incoming Staff", tasks:[
+        {id:"t-i-1",name:"Valantis — Compliance",status:"NOT_STARTED",target:"Feb 23",detail:"Blocked by workers comp; I-9, W-4, system access"},
+        {id:"t-i-2",name:"Ana Carillo — DA",status:"NOT_STARTED",target:"Mar 1",detail:"Blocked by workers comp; I-9, W-4, system access"},
+        {id:"t-i-3",name:"Dr. Maria — Associate",status:"NOT_STARTED",target:"July 1",detail:"Blocked by workers comp + malpractice; IMPACT enrollment, HIPAA/OSHA training, Archy access"},
+      ]},
+      { id:"employment", label:"Employment Infrastructure", tasks:[
+        {id:"t-e-1",name:"Workers compensation insurance",status:"DONE",detail:"Brandy confirmed Feb 18",critical:true},
+        {id:"t-e-2",name:"IDES Unemployment Insurance",status:"NOT_STARTED",detail:"Register as new employer; blocks first payroll"},
+        {id:"t-e-3",name:"First payroll test run",status:"NOT_STARTED",target:"Feb",detail:"Blocked by workers comp + IDES"},
+        {id:"t-e-4",name:"Staff photography + headshots",status:"NOT_STARTED",target:"May 15"},
+        {id:"t-e-5",name:"Employee handbook approved",status:"DONE",detail:"Approved Feb 18, sending to attorney"},
+        {id:"t-e-6",name:"Health insurance (BCBSIL)",status:"DONE"},
+      ]},
+      { id:"training-program", label:"Training Program", tasks:[
+        {id:"t-tp-1",name:"8-week pre-opening training schedule",status:"NOT_STARTED",critical:true},
+        {id:"t-tp-2",name:"Cross-training matrix (front desk ↔ clinical)",status:"NOT_STARTED"},
+        {id:"t-tp-3",name:"Morning huddle protocol",status:"NOT_STARTED"},
+        {id:"t-tp-4",name:"30/60/90 day performance reviews",status:"NOT_STARTED"},
+        {id:"t-tp-5",name:"Mentorship program (Brandy/Cy/Diane mentor new hires)",status:"NOT_STARTED"},
+      ]},
+      { id:"hr-systems", label:"HR Systems", tasks:[
+        {id:"t-hr-1",name:"Time & attendance in Gusto",status:"NOT_STARTED"},
+        {id:"t-hr-2",name:"Emergency communication tree",status:"NOT_STARTED"},
+        {id:"t-hr-3",name:"Conflict resolution procedures",status:"NOT_STARTED"},
+      ]},
+      { id:"hr-paperwork", label:"HR Paperwork & Policies", tasks:[
+        {id:"t-hp-1",name:"Offer letter — Ana Carillo (DA)",status:"DONE",detail:"Jan 21"},
+        {id:"t-hp-2",name:"Offer letter — Dr. Maria (Associate)",status:"DONE",detail:"Jan 21"},
+        {id:"t-hp-3",name:"Employee social media policy",status:"DONE",detail:"Feb 2"},
+        {id:"t-hp-4",name:"Employee directory",status:"DONE",detail:"Feb 13"},
+        {id:"t-hp-5",name:"PTO policy update",status:"DONE",detail:"Feb 5"},
+        {id:"t-hp-6",name:"Team preferences form",status:"DONE",detail:"Feb 14"},
+        {id:"t-hp-7",name:"Employment verification letter",status:"DONE",detail:"Feb 13"},
+        {id:"t-hp-8",name:"Patient referral source tracking",status:"DONE",detail:"Jan 22"},
+        {id:"t-hp-9",name:"Patient call tracking docs",status:"DONE",detail:"Jan 27"},
+        {id:"t-hp-10",name:"Skylar weekly schedule",status:"DONE",detail:"Feb 5"},
+        {id:"t-hp-11",name:"Resume update",status:"DONE",detail:"Feb 1"},
+        {id:"t-hp-12",name:"Credential representation (BDS/DDS)",status:"DONE",detail:"Feb 7"},
+        {id:"t-hp-13",name:"Illinois sexual harassment prevention training",status:"NOT_STARTED",detail:"Required by law for 15+ employees"},
+        {id:"t-hp-14",name:"Illinois lactation accommodation policy",status:"NOT_STARTED"},
+      ]},
+    ]
+  },
+  { id:"patient-care", label:"PATIENT CARE", sub:"Clinical Operations", color:"#60A5FA",
+    branches:[
+      { id:"chairside", label:"Chairside", tasks:[
+        {id:"p-ch-1",name:"A-dec dental chairs",status:"NOT_STARTED",detail:"Delivery + operatory setup; blocked by construction"},
+        {id:"p-ch-2",name:"Intraoral scanners",status:"DONE",detail:"Primescan 2, TRIOS"},
+        {id:"p-ch-3",name:"Solea laser",status:"DONE"},
+        {id:"p-ch-4",name:"QuickSleeper 5",status:"NOT_STARTED",target:"Training May 8",detail:"Paid 11/03"},
+        {id:"p-ch-5",name:"Yomi robotic surgical system",status:"NOT_STARTED",detail:"Training coordination"},
+        {id:"p-ch-6",name:"Neodent implant system evaluation",status:"DONE",detail:"Amanda in-office visit Feb 11"},
+      ]},
+      { id:"imaging", label:"Imaging", tasks:[
+        {id:"p-im-1",name:"Planmeca G7 CBCT",status:"NOT_STARTED",detail:"Installation pending; needs IEMA registration + training"},
+        {id:"p-im-2",name:"2x Nomad portable X-rays",status:"IN_PROGRESS",detail:"En route from Goetze"},
+        {id:"p-im-3",name:"IEMA X-ray registration",status:"NOT_STARTED",detail:"Blocked by equipment on-site",critical:true},
+      ]},
+      { id:"sterilization", label:"Sterilization", tasks:[
+        {id:"p-st-1",name:"Sterilization equipment",status:"NOT_STARTED",detail:"Pending delivery"},
+        {id:"p-st-2",name:"Autoclave logbook setup",status:"NOT_STARTED"},
+        {id:"p-st-3",name:"Spore test validation",status:"NOT_STARTED",detail:"Must pass before first patient",critical:true},
+        {id:"p-st-4",name:"Sterilization system operational",status:"NOT_STARTED",detail:"All above + compressor + vacuum + infection control",critical:true},
+      ]},
+      { id:"pharma", label:"Pharmacy + Sedation", tasks:[
+        {id:"p-ph-1",name:"Oral sedation protocols",status:"DONE"},
+        {id:"p-ph-2",name:"Pharmacy compounding formulary",status:"DONE"},
+        {id:"p-ph-3",name:"Nitrous oxide system",status:"NOT_STARTED",detail:"Blocked by plumbing verification"},
+        {id:"p-ph-4",name:"IV sedation — Dr. Amit certified",status:"DONE"},
+        {id:"p-ph-5",name:"DEA registration",status:"DONE"},
+      ]},
+      { id:"patient-flow", label:"Patient Flow", tasks:[
+        {id:"p-pf-1",name:"Archy medical history config",status:"IN_PROGRESS",detail:"Diane"},
+        {id:"p-pf-2",name:"Patient intake workflow",status:"NOT_STARTED"},
+        {id:"p-pf-3",name:"Scheduling templates in Archy",status:"NOT_STARTED",detail:"Blocked by Archy onboarding meeting",critical:true},
+        {id:"p-pf-4",name:"Insurance verification (Archy Verify)",status:"NOT_STARTED",detail:"Blocked by Archy onboarding meeting",critical:true},
+        {id:"p-pf-5",name:"Fee schedule loaded in Archy",status:"NOT_STARTED",detail:"P80 comparison complete; blocked by Archy meeting",critical:true},
+        {id:"p-pf-6",name:"Archy in operatories",status:"NOT_STARTED",detail:"Blocked by operatory PCs configured",critical:true},
+      ]},
+      { id:"clinical-research", label:"Clinical Research & Protocols", tasks:[
+        {id:"p-cr-1",name:"Full-arch implant workflow",status:"DONE",detail:"Feb 1"},
+        {id:"p-cr-2",name:"Nitrous / pediatric sedation protocols",status:"DONE",detail:"Feb 6"},
+        {id:"p-cr-3",name:"AlignerBase preferences guide",status:"DONE",detail:"Jan 30"},
+        {id:"p-cr-4",name:"Ivoclar product reference guide",status:"DONE",detail:"Jan 26"},
+        {id:"p-cr-5",name:"OsseoPress vs Densah burs evaluation",status:"DONE",detail:"Jan 24"},
+        {id:"p-cr-6",name:"Neodent implant inventory guide",status:"DONE",detail:"Jan 30"},
+        {id:"p-cr-7",name:"Neodent implant order",status:"DONE",detail:"Jan 31"},
+        {id:"p-cr-8",name:"AI dental research project review",status:"DONE",detail:"Jan 19"},
+        {id:"p-cr-9",name:"AI & dental conference abstracts",status:"DONE",detail:"Jan 26"},
+        {id:"p-cr-10",name:"Aligner treatment courses",status:"NOT_STARTED",detail:"Feb 13"},
+        {id:"p-cr-11",name:"Dr. Nossair mentorship restructuring",status:"DONE",detail:"Feb 1"},
+      ]},
+      { id:"implant-systems", label:"Implant Systems", tasks:[
+        {id:"p-is-1",name:"Neodent MUA vs third-party analysis",status:"DONE",detail:"Jan 31; Cy evaluation"},
+        {id:"p-is-2",name:"Articulator system selection",status:"DONE",detail:"Jan 24"},
+        {id:"p-is-3",name:"Intraoral scanner deep comparison",status:"DONE",detail:"Feb 13"},
+      ]},
+    ]
+  },
+  { id:"digital-lab", label:"THE DIGITAL LAB", sub:"Design, Milling, Printing", color:"#4ECDC4",
+    branches:[
+      { id:"design", label:"Digital Design", tasks:[
+        {id:"d-d-1",name:"Exocad Cohort 23",status:"IN_PROGRESS",target:"Through Mar 6",detail:"Mon/Fri sessions; blocks lab SOPs"},
+        {id:"d-d-2",name:"Folder naming conventions",status:"NOT_STARTED"},
+        {id:"d-d-3",name:"Lab prescription templates",status:"NOT_STARTED"},
+        {id:"d-d-4",name:"Case tracking forms",status:"NOT_STARTED"},
+        {id:"d-d-5",name:"Digital lab SOPs",status:"NOT_STARTED",detail:"Blocked by Exocad Cohort 23 complete"},
+      ]},
+      { id:"milling", label:"Milling", tasks:[
+        {id:"d-m-1",name:"iMill",status:"IN_PROGRESS",detail:"In transit; calibrate + validate workflow"},
+        {id:"d-m-2",name:"Speedfire sintering oven",status:"DONE"},
+        {id:"d-m-3",name:"Bur replacement log",status:"NOT_STARTED"},
+      ]},
+      { id:"printing", label:"3D Printing", tasks:[
+        {id:"d-p-1",name:"SprintRay Pro 2",status:"DONE"},
+        {id:"d-p-2",name:"SprintRay training manual",status:"DONE"},
+        {id:"d-p-3",name:"LuxCreo iLux Pro Unit 1",status:"DONE"},
+        {id:"d-p-4",name:"LuxCreo iLux Pro Unit 2",status:"NOT_STARTED",target:"July",detail:"On hold until final location"},
+        {id:"d-p-5",name:"Resin tank maintenance log",status:"NOT_STARTED"},
+      ]},
+      { id:"qc", label:"Quality Control", tasks:[
+        {id:"d-q-1",name:"Porcelain furnace temp test",status:"NOT_STARTED"},
+        {id:"d-q-2",name:"Curing unit validation",status:"NOT_STARTED"},
+        {id:"d-q-3",name:"Verification jig workflow",status:"DONE"},
+        {id:"d-q-4",name:"CDT certification for Cy",status:"NOT_STARTED",detail:"Contact NBC (800) 684-5310"},
+      ]},
+      { id:"lab-research", label:"Lab Research & Workflows", tasks:[
+        {id:"d-lr-1",name:"iMill milling blank selection guide",status:"DONE",detail:"Jan 20"},
+        {id:"d-lr-2",name:"iMill bonding & materials Q&A",status:"DONE",detail:"Jan 29"},
+        {id:"d-lr-3",name:"Zirconia block guide",status:"DONE",detail:"Jan 27"},
+        {id:"d-lr-4",name:"Same-day zirconia workflow",status:"DONE",detail:"Jan 31"},
+        {id:"d-lr-5",name:"Milling vs printing dentures analysis",status:"DONE",detail:"Jan 27"},
+        {id:"d-lr-6",name:"Digital denture wax-free workflow",status:"DONE",detail:"Feb 1"},
+        {id:"d-lr-7",name:"Exocad denture splitting",status:"DONE",detail:"Jan 27"},
+        {id:"d-lr-8",name:"SprintRay denture cost breakdown",status:"DONE",detail:"Feb 2"},
+        {id:"d-lr-9",name:"Neodent MUA vs third-party",status:"DONE",detail:"Jan 31"},
+        {id:"d-lr-10",name:"Occlusal guard analysis",status:"DONE",detail:"Feb 11"},
+        {id:"d-lr-11",name:"LuxCreo UV curing workflows",status:"DONE",detail:"Feb 13"},
+        {id:"d-lr-12",name:"Lab holding tools",status:"DONE",detail:"Feb 4"},
+        {id:"d-lr-13",name:"Intraoral scanner deep comparison",status:"DONE",detail:"Feb 13"},
+        {id:"d-lr-14",name:"Articulator system selection",status:"DONE",detail:"Jan 24"},
+        {id:"d-lr-15",name:"Multi-color 3D printer (peds toys)",status:"DONE",detail:"Jan 24"},
+      ]},
+    ]
+  },
+  { id:"revenue", label:"REVENUE + PAYERS", sub:"Billing, Enrollment, Collections", color:"#34D399",
+    branches:[
+      { id:"credentialing", label:"Credentialing", tasks:[
+        {id:"r-cred-1",name:"Submit CAQH profile",status:"NOT_STARTED",critical:true},
+        {id:"r-cred-2",name:"NPI Type 1 + Type 2 association",status:"NOT_STARTED",critical:true},
+      ]},
+      { id:"medicaid", label:"Medicaid Enrollment Chain", tasks:[
+        {id:"r-m-1",name:"W-9 Certification",status:"DONE",detail:"Certified 1/19/26",critical:true},
+        {id:"r-m-2",name:"IMPACT Group Enrollment",status:"IN_PROGRESS",detail:"Shows complete; call Tuesday to confirm",critical:true},
+        {id:"r-m-3",name:"Dr. Amit individual enrollment",status:"NOT_STARTED",detail:"Link Type 1 NPI to Type 2 NPI",critical:true},
+        {id:"r-m-4",name:"DentaQuest enrollment",status:"NOT_STARTED",detail:"2-4 weeks after IMPACT confirmed",critical:true},
+        {id:"r-m-5",name:"MCO Credentialing",status:"NOT_STARTED",detail:"Molina, Meridian, Blue Cross Community; 4-8 weeks parallel",critical:true},
+        {id:"r-m-6",name:"Medicaid billing live",status:"NOT_STARTED",critical:true},
+        {id:"r-m-7",name:"Dr. Maria IMPACT + credentialing",status:"NOT_STARTED",target:"After July 1",detail:"Individual enrollment + DentaQuest + MCO"},
+      ]},
+      { id:"membership", label:"Membership + Private Pay", tasks:[
+        {id:"r-p-1",name:"Platform: Clerri vs BoomCloud",status:"NOT_STARTED"},
+        {id:"r-p-2",name:"DMPO registration (if BoomCloud)",status:"NOT_STARTED",detail:"IL Discount Medical Plan Operator"},
+        {id:"r-p-3",name:"Employer outreach pamphlet",status:"DONE"},
+        {id:"r-p-4",name:"Membership plan billing platform (BoomCloud/Clerri)",status:"NOT_STARTED"},
+        {id:"r-p-5",name:"Membership plan marketing materials",status:"NOT_STARTED"},
+      ]},
+      { id:"employer-contracts", label:"Employer Contracts", tasks:[
+        {id:"r-ec-1",name:"DOT Foods employer contract negotiation",status:"NOT_STARTED",detail:"$600K-$1.2M ARR potential",critical:true},
+        {id:"r-ec-2",name:"Direct primary care pricing model",status:"NOT_STARTED"},
+        {id:"r-ec-3",name:"Employer onboarding process",status:"NOT_STARTED"},
+      ]},
+      { id:"sleep-rev", label:"Sleep Medicine Revenue", tasks:[
+        {id:"r-s-1",name:"Medical insurance credentialing",status:"NOT_STARTED",detail:"Jan-Mar timeline"},
+        {id:"r-s-2",name:"AADSM exam prep",status:"IN_PROGRESS"},
+      ]},
+      { id:"fin-ops", label:"Financial Operations", tasks:[
+        {id:"r-f-1",name:"Business bank accounts",status:"DONE",detail:"Active 2/1"},
+        {id:"r-f-2",name:"401(k) finalization — Empower/Tom Mantych",status:"NOT_STARTED"},
+        {id:"r-f-3",name:"Monthly operating budget",status:"DONE",detail:"$147K/mo"},
+        {id:"r-f-4",name:"Financial review cadence established",status:"DONE",detail:"Monthly reviews active (Jan 20, Feb 4, Feb 11)"},
+        {id:"r-f-5",name:"PCI-compliant payment processing",status:"NOT_STARTED",critical:true},
+        {id:"r-f-6",name:"Cash handling + deposit procedures",status:"NOT_STARTED"},
+        {id:"r-f-7",name:"Chart of accounts setup",status:"NOT_STARTED"},
+        {id:"r-f-8",name:"Monthly financial close procedures",status:"NOT_STARTED"},
+      ]},
+      { id:"fin-planning", label:"Financial Planning", tasks:[
+        {id:"r-fp-1",name:"2025 startup financials prep",status:"DONE",detail:"Jan 17"},
+        {id:"r-fp-2",name:"Operating agreement & legal firm",status:"DONE",detail:"Jan 17"},
+        {id:"r-fp-3",name:"Legal cost reduction strategy",status:"DONE",detail:"Jan 20"},
+        {id:"r-fp-4",name:"Form 2553 / S-Corp clarification",status:"DONE",detail:"Jan 20"},
+        {id:"r-fp-5",name:"Business credit card selection",status:"DONE",detail:"Jan 25"},
+        {id:"r-fp-6",name:"Duplex investment ROI analysis",status:"DONE",detail:"Jan 28"},
+        {id:"r-fp-7",name:"Student loan repayment strategy",status:"DONE",detail:"Jan 28"},
+        {id:"r-fp-8",name:"Fee schedule — UCR P80 comparison",status:"DONE",detail:"Jan 29"},
+        {id:"r-fp-9",name:"Fee schedule — printable PDF",status:"DONE",detail:"Jan 29"},
+        {id:"r-fp-10",name:"Fee schedule — code updates",status:"DONE",detail:"Jan 29"},
+        {id:"r-fp-11",name:"Insurance verification setup",status:"DONE",detail:"Feb 9"},
+        {id:"r-fp-12",name:"Valantis payment receipt",status:"DONE",detail:"Jan 24"},
+        {id:"r-fp-13",name:"IDES/employer compliance guide",status:"DONE",detail:"Feb 4"},
+        {id:"r-fp-14",name:"Membership discount tiering",status:"DONE",detail:"Feb 4"},
+      ]},
+      { id:"strategy", label:"Strategy & Business Dev", tasks:[
+        {id:"r-st-1",name:"DOT Foods employer strategy",status:"DONE",detail:"Jan 23"},
+        {id:"r-st-2",name:"Leadership & strategy frameworks",status:"DONE",detail:"Jan 23"},
+        {id:"r-st-3",name:"Profitability strategy fact sheet",status:"DONE",detail:"Jan 23"},
+        {id:"r-st-4",name:"Medicaid scope structuring",status:"DONE",detail:"Jan 23"},
+        {id:"r-st-5",name:"NSync Dental partnership evaluation",status:"DONE",detail:"Jan 13; not moving forward"},
+        {id:"r-st-6",name:"Aspen vs Heartland comparison",status:"DONE",detail:"Feb 7"},
+        {id:"r-st-7",name:"Power BI training (Valantis)",status:"DONE",detail:"Jan 23"},
+      ]},
+    ]
+  },
+  { id:"compliance", label:"COMPLIANCE + SAFETY", sub:"Regulatory, Policies, Risk", color:"#EF4444",
+    branches:[
+      { id:"hipaa", label:"HIPAA Program", tasks:[
+        {id:"c-h-1",name:"HIPAA Privacy Policy",status:"NOT_STARTED",detail:"Valantis leads after Feb 23 start",critical:true},
+        {id:"c-h-2",name:"Notice of Privacy Practices",status:"NOT_STARTED",detail:"Patient-facing; every new patient + posted"},
+        {id:"c-h-3",name:"HIPAA Security Policies",status:"NOT_STARTED",detail:"Blocked by firewall installed",critical:true},
+        {id:"c-h-4",name:"HIPAA Breach Notification Policy",status:"NOT_STARTED",detail:"Incident response, HHS reporting"},
+        {id:"c-h-5",name:"HIPAA Training Curriculum",status:"NOT_STARTED",detail:"All 4 policies must be complete first",critical:true},
+        {id:"c-h-6",name:"HIPAA Business Associate Agreements",status:"NOT_STARTED",detail:"Required contracts with all PHI vendors"},
+        {id:"c-h-7",name:"HIPAA Security Risk Assessment",status:"NOT_STARTED",detail:"Required baseline before handling patient data",critical:true},
+      ]},
+      { id:"osha", label:"OSHA Program", tasks:[
+        {id:"c-o-1",name:"OSHA Exposure Control Plan",status:"NOT_STARTED",detail:"Diane leads; bloodborne pathogens",critical:true},
+        {id:"c-o-2",name:"OSHA Hazard Communication",status:"NOT_STARTED",detail:"SDS binder, container labels"},
+        {id:"c-o-3",name:"Infection Control Protocols",status:"NOT_STARTED",detail:"Sterilization, disinfection, waterline, hand hygiene",critical:true},
+        {id:"c-o-4",name:"OSHA Training Curriculum",status:"NOT_STARTED",detail:"All 3 docs must be complete first",critical:true},
+        {id:"c-o-5",name:"Sharps Injury Prevention Program",status:"NOT_STARTED",detail:"OSHA engineered sharps safety devices + injury log"},
+        {id:"c-o-6",name:"Dental Unit Waterline Testing",status:"NOT_STARTED",detail:"CDC biofilm prevention protocol"},
+      ]},
+      { id:"regulatory", label:"Regulatory", tasks:[
+        {id:"c-reg-1",name:"Register with IDFPR for practice location",status:"DONE"},
+        {id:"c-reg-2",name:"DEA controlled substance inventory system",status:"NOT_STARTED",detail:"Precise tracking + secure storage"},
+      ]},
+      { id:"insurance-liab", label:"Insurance + Liability", tasks:[
+        {id:"c-i-1",name:"Workers compensation",status:"DONE",detail:"Brandy confirmed Feb 18",critical:true},
+        {id:"c-i-2",name:"General liability",status:"IN_PROGRESS",detail:"State Farm meeting Jan 26; bind before opening",critical:true},
+        {id:"c-i-3",name:"Property/equipment insurance",status:"NOT_STARTED",target:"Effective July 1",critical:true,detail:"Coverage for all practice equipment and facility contents"},
+        {id:"c-i-4",name:"Malpractice (Dr. Kumar)",status:"DONE"},
+        {id:"c-i-5",name:"Extend malpractice to Dr. Maria",status:"NOT_STARTED",target:"Before July 1"},
+        {id:"c-i-6",name:"Certificate of insurance binder",status:"NOT_STARTED",detail:"Compile all certs after binding"},
+      ]},
+      { id:"state-reg", label:"State Registrations", tasks:[
+        {id:"c-s-1",name:"IEMA X-ray registration",status:"NOT_STARTED",detail:"Blocked by equipment on-site"},
+        {id:"c-s-2",name:"IDES Unemployment Insurance",status:"NOT_STARTED",detail:"Blocks first payroll"},
+        {id:"c-s-3",name:"IDFPR",status:"DONE"},
+      ]},
+      { id:"compliance-research", label:"Compliance Research", tasks:[
+        {id:"c-cr-1",name:"OSHA/infection control study guides",status:"DONE",detail:"Jan 29"},
+        {id:"c-cr-2",name:"Medicaid / autism care response",status:"DONE",detail:"Feb 7"},
+        {id:"c-cr-3",name:"Medicaid inquiry reply",status:"DONE",detail:"Jan 23"},
+        {id:"c-cr-4",name:"Goodstack nonprofit verification",status:"DONE",detail:"Jan 29; Anthropic program via SCMHA"},
+      ]},
+    ]
+  },
+  { id:"systems", label:"SYSTEMS + CONNECTIVITY", sub:"Technology Infrastructure", color:"#A78BFA",
+    branches:[
+      { id:"network", label:"Network Security", tasks:[
+        {id:"s-n-1",name:"HIPAA-compliant firewall",status:"NOT_STARTED",detail:"SonicWall/Sophos/Fortinet/UniFi; blocks HIPAA Security",critical:true},
+        {id:"s-n-2",name:"TP-Link router for VoIP",status:"DONE"},
+        {id:"s-n-3",name:"Staff security awareness training",status:"NOT_STARTED",detail:"Human firewall prevents 95% of attacks"},
+        {id:"s-n-4",name:"Microsoft 365 security baseline",status:"NOT_STARTED",detail:"MFA + conditional access"},
+      ]},
+      { id:"pms", label:"Practice Management", tasks:[
+        {id:"s-p-1",name:"Archy Platinum",status:"DONE",detail:"Active"},
+        {id:"s-p-2",name:"Archy onboarding meeting",status:"NOT_STARTED",detail:"Blocks all Archy config + staff training",critical:true},
+        {id:"s-p-3",name:"Archy medical history config",status:"IN_PROGRESS",detail:"Diane"},
+        {id:"s-p-4",name:"Eaglesoft evaluation",status:"DONE",detail:"Bob in-office visit Feb 11"},
+        {id:"s-p-5",name:"Archy staff training program",status:"NOT_STARTED",detail:"Blocked by onboarding meeting",critical:true},
+      ]},
+      { id:"automation", label:"Automation", tasks:[
+        {id:"s-a-1",name:"n8n patient communication automation",status:"NOT_STARTED",detail:"Appointment reminders reduce no-shows 30%+"},
+        {id:"s-a-2",name:"Digital intake forms via n8n",status:"NOT_STARTED"},
+        {id:"s-a-3",name:"Practice analytics dashboard",status:"NOT_STARTED"},
+      ]},
+      { id:"comms", label:"Communications", tasks:[
+        {id:"s-c-1",name:"Mango Voice phones",status:"DONE",detail:"Arrived and operational"},
+        {id:"s-c-2",name:"Mango Voice texting",status:"DONE",detail:"Registered 1/14"},
+        {id:"s-c-3",name:"SMS verification test",status:"NOT_STARTED"},
+      ]},
+      { id:"file-infra", label:"File Infrastructure", tasks:[
+        {id:"s-f-1",name:"SharePoint migration",status:"DONE"},
+        {id:"s-f-2",name:"SharePoint folder permissions",status:"NOT_STARTED",detail:"Blocks operatory PC enrollment",critical:true},
+        {id:"s-f-3",name:"Intune device enrollment",status:"NOT_STARTED",detail:"Blocked by SharePoint permissions + firewall"},
+        {id:"s-f-4",name:"ScanSnap to SharePoint",status:"NOT_STARTED"},
+        {id:"s-f-5",name:"Operatory PCs (Lenovo M90q)",status:"NOT_STARTED",detail:"Configure; blocks Archy in operatories",critical:true},
+        {id:"s-f-6",name:"Dell Precision (Cy lab)",status:"NOT_STARTED"},
+      ]},
+      { id:"ops-hub", label:"Operations Hub", tasks:[
+        {id:"s-oh-1",name:"Operations Hub overview",status:"DONE",detail:"Feb 2"},
+        {id:"s-oh-2",name:"Ops Hub logo redesign",status:"DONE",detail:"Feb 2"},
+        {id:"s-oh-3",name:"Ops Hub — CEREC integration",status:"DONE",detail:"Feb 4"},
+        {id:"s-oh-4",name:"Ops Hub — brand retheme",status:"DONE",detail:"Feb 4"},
+        {id:"s-oh-5",name:"Ops Hub — aesthetic upgrades",status:"DONE",detail:"Feb 4"},
+        {id:"s-oh-6",name:"Ops Hub — 8 new procedures (v1.2)",status:"DONE",detail:"Feb 9"},
+        {id:"s-oh-7",name:"Ops Hub — Procedure Wizard",status:"DONE",detail:"Feb 9"},
+        {id:"s-oh-8",name:"Ops Hub — GitHub tools",status:"DONE",detail:"Feb 9"},
+      ]},
+      { id:"it-research", label:"IT Research & Config", tasks:[
+        {id:"s-ir-1",name:"Mango Voice vs Weave VoIP evaluation",status:"DONE",detail:"Jan 17"},
+        {id:"s-ir-2",name:"Router/firewall HIPAA compliance research",status:"DONE",detail:"Feb 2"},
+        {id:"s-ir-3",name:"Archy Intelligence feature access",status:"DONE",detail:"Jan 22"},
+        {id:"s-ir-4",name:"Ask Archy AI onboarding email",status:"DONE",detail:"Jan 26"},
+        {id:"s-ir-5",name:"Agentic AI for Archy",status:"DONE",detail:"Feb 9"},
+        {id:"s-ir-6",name:"Dental AI platform evaluation",status:"DONE",detail:"Feb 13"},
+        {id:"s-ir-7",name:"Outlook/M365 troubleshooting",status:"DONE",detail:"Feb 10"},
+        {id:"s-ir-8",name:"Microsoft update deployment",status:"DONE",detail:"Feb 13"},
+        {id:"s-ir-9",name:"ScanSnap cloud scanning setup",status:"DONE",detail:"Jan 24"},
+        {id:"s-ir-10",name:"Google Drive to SharePoint migration",status:"DONE",detail:"Feb 12"},
+        {id:"s-ir-11",name:"Lenovo M90q configuration",status:"DONE",detail:"Feb 4"},
+        {id:"s-ir-12",name:"Operatory PC & SharePoint planning",status:"DONE",detail:"Feb 11"},
+        {id:"s-ir-13",name:"Dell Precision workstation (Cy)",status:"DONE",detail:"Jan 28"},
+      ]},
+    ]
+  },
+  { id:"brand", label:"COMMUNITY + BRAND", sub:"Marketing, Outreach, Identity", color:"#FF6B6B",
+    branches:[
+      { id:"outreach", label:"Community Outreach", tasks:[
+        {id:"br-o-1",name:"Teddy Bear Clinic",status:"IN_PROGRESS",target:"March",detail:"Feb 9 school meeting; blocked by sticker setup"},
+        {id:"br-o-2",name:"Chamber of Commerce",status:"DONE",detail:"Feb 6"},
+        {id:"br-o-3",name:"Newspaper column series",status:"DONE",detail:"Launched Jan 27"},
+        {id:"br-o-4",name:"IBCCES Autism certification",status:"IN_PROGRESS"},
+        {id:"br-o-5",name:"Give Kids a Smile",status:"DONE",detail:"Feb 6 — Dr. Amit & Diane"},
+        {id:"br-o-6",name:"Google Business Profile setup",status:"NOT_STARTED",detail:"80% of local searches start with Google",critical:true},
+        {id:"br-o-7",name:"Family referral incentive program",status:"NOT_STARTED"},
+        {id:"br-o-8",name:"Automated Google review request system",status:"NOT_STARTED"},
+      ]},
+      { id:"seo", label:"SEO", tasks:[
+        {id:"br-seo-1",name:"Local SEO keyword optimization",status:"NOT_STARTED",critical:true},
+        {id:"br-seo-2",name:"Service area pages for surrounding towns",status:"NOT_STARTED"},
+        {id:"br-seo-3",name:"Insurance + payment options website page",status:"NOT_STARTED"},
+      ]},
+      { id:"advertising", label:"Advertising", tasks:[
+        {id:"br-a-1",name:"Lamar billboards",status:"IN_PROGRESS",detail:"3 sides, Rushville + Beardstown"},
+        {id:"br-a-2",name:"Google Ads copy",status:"DONE"},
+        {id:"br-a-3",name:"Vanity phone number",status:"DONE"},
+      ]},
+      { id:"digital-auto", label:"Digital + Automation", tasks:[
+        {id:"br-d-1",name:"n8n developer brief",status:"DONE",detail:"9 workflows specified"},
+        {id:"br-d-2",name:"Website terms/privacy + SMS",status:"DONE"},
+        {id:"br-d-3",name:"Operations Hub",status:"DONE"},
+        {id:"br-d-4",name:"Zimbis partnership",status:"IN_PROGRESS",detail:"Hold meeting Feb 2"},
+      ]},
+      { id:"materials", label:"Brand Materials", tasks:[
+        {id:"br-m-1",name:"Branded hoodies (20 units)",status:"IN_PROGRESS",detail:"Verify order status"},
+        {id:"br-m-2",name:"Sticker paper + printing setup",status:"NOT_STARTED",detail:"Order vinyl/glossy/holographic; EcoTank + Cricut"},
+        {id:"br-m-3",name:"Custom poly carry bags",status:"NOT_STARTED"},
+        {id:"br-m-4",name:"Practice branding standardized",status:"DONE"},
+        {id:"br-m-5",name:"Exterior practice signage",status:"NOT_STARTED",critical:true},
+        {id:"br-m-6",name:"Interior wayfinding + room labels",status:"NOT_STARTED"},
+        {id:"br-m-7",name:"New patient welcome packet",status:"NOT_STARTED"},
+      ]},
+      { id:"content", label:"Content & Publications", tasks:[
+        {id:"br-cn-1",name:"Newspaper column topic research",status:"DONE",detail:"Jan 25"},
+        {id:"br-cn-2",name:"Bleeding gums newspaper article",status:"DONE",detail:"Feb 3"},
+        {id:"br-cn-3",name:"National Toothache Day script",status:"DONE",detail:"Feb 9"},
+        {id:"br-cn-4",name:"Diabetes blog post editing",status:"DONE",detail:"Feb 9"},
+        {id:"br-cn-5",name:"Rushville community research",status:"DONE",detail:"Feb 3"},
+        {id:"br-cn-6",name:"Vanity phone number analysis",status:"DONE",detail:"Feb 1"},
+        {id:"br-cn-7",name:"Theater & billboard outreach",status:"DONE",detail:"Jan 24"},
+        {id:"br-cn-8",name:"Clinic vs Office branding fix",status:"DONE",detail:"Feb 11"},
+        {id:"br-cn-9",name:"Teddy bear mascot research",status:"DONE",detail:"Feb 10"},
+        {id:"br-cn-10",name:"Teddy bear booth planning",status:"DONE",detail:"Feb 10"},
+        {id:"br-cn-11",name:"Free branded bags guide",status:"DONE",detail:"Feb 10"},
+      ]},
+    ]
+  },
+  { id:"education", label:"EDUCATION", sub:"Training + Development", color:"#F472B6",
+    branches:[
+      { id:"required", label:"Pre-Opening Required", tasks:[
+        {id:"e-r-1",name:"All staff HIPAA training",status:"NOT_STARTED",detail:"Blocked by HIPAA curriculum",critical:true},
+        {id:"e-r-2",name:"All staff OSHA training",status:"NOT_STARTED",detail:"Blocked by OSHA curriculum",critical:true},
+        {id:"e-r-3",name:"Dr. Maria HIPAA + OSHA",status:"NOT_STARTED",target:"After July 1",detail:"Blocked by curricula + start date"},
+        {id:"e-r-4",name:"Planmeca in-office training",status:"NOT_STARTED",target:"May",detail:"Blocked by pre-training videos"},
+        {id:"e-r-5",name:"QuickSleeper 5 training",status:"NOT_STARTED",target:"May 8"},
+        {id:"e-r-6",name:"Archy staff training",status:"NOT_STARTED",detail:"Blocked by Archy onboarding meeting",critical:true},
+      ]},
+      { id:"cy-dev", label:"Cy Professional Dev", tasks:[
+        {id:"e-c-1",name:"Exocad Cohort 23",status:"IN_PROGRESS",target:"Through Mar 6"},
+        {id:"e-c-2",name:"LuxAcademy certification",status:"DONE"},
+        {id:"e-c-3",name:"CDT certification",status:"NOT_STARTED",detail:"Contact NBC; long-term credential"},
+        {id:"e-c-4",name:"Digital lab SOPs",status:"NOT_STARTED",detail:"Blocked by Exocad complete"},
+        {id:"e-c-5",name:"Training materials library",status:"DONE",detail:"Zirconia, CBCT, SprintRay, occlusal guard, CEREC, CDT 2026"},
+      ]},
+      { id:"amit-ce", label:"Dr. Amit CE", tasks:[
+        {id:"e-a-1",name:"AADSM Sleep Medicine exam",status:"IN_PROGRESS"},
+        {id:"e-a-2",name:"Cochin Implant Institute",status:"IN_PROGRESS",detail:"Zygomatic/pterygoid training"},
+        {id:"e-a-3",name:"CIMEA credential evaluation",status:"IN_PROGRESS",detail:"Italian university program"},
+        {id:"e-a-4",name:"ILAPEO Brazil",status:"NOT_STARTED",target:"June 22-26",detail:"Registration + tourist visa (April 10)"},
+        {id:"e-a-5",name:"Aligner treatment courses",status:"NOT_STARTED"},
+        {id:"e-a-6",name:"ILAPEO Neodent Course",status:"NOT_STARTED",target:"April 27-30"},
+      ]},
+      { id:"maria-ce", label:"Dr. Maria CE", tasks:[
+        {id:"e-m-1",name:"CE courses",status:"NOT_STARTED",target:"After July 1",detail:"Zygomatic/pterygoid, digital workflow"},
+      ]},
+      { id:"events", label:"Scheduled Events", tasks:[
+        {id:"e-ev-1",name:"uLab Lunch and Learn",status:"NOT_STARTED",target:"Feb/Mar"},
+        {id:"e-ev-2",name:"LMT Lab Day / Midwinter Chicago",status:"DONE",target:"Feb 18-21"},
+        {id:"e-ev-3",name:"Overjet demo",status:"DONE",target:"Feb 15"},
+        {id:"e-ev-4",name:"Bart + Erik in-office visit",status:"DONE",target:"Feb 24"},
+        {id:"e-ev-5",name:"VideaAI demo",status:"DONE",target:"Feb 13",detail:"AI dental technology evaluation"},
+      ]},
+      { id:"study-guides", label:"Study Guides & Resources", tasks:[
+        {id:"e-sg-1",name:"Skylar study guide",status:"DONE",detail:"Jan 27"},
+        {id:"e-sg-2",name:"DA training study guides (x4)",status:"DONE",detail:"Feb 3"},
+        {id:"e-sg-3",name:"Pediatric dentistry study guides",status:"DONE",detail:"Feb 3"},
+        {id:"e-sg-4",name:"Caries/matrix study guides",status:"DONE",detail:"Feb 9"},
+        {id:"e-sg-5",name:"CDT 2026 coding guide",status:"DONE",detail:"Feb 5"},
+        {id:"e-sg-6",name:"CEREC design guide",status:"DONE",detail:"Feb 4"},
+        {id:"e-sg-7",name:"CEREC PDF printable",status:"DONE",detail:"Feb 4"},
+        {id:"e-sg-8",name:"SprintRay training manual",status:"DONE",detail:"Feb 4"},
+        {id:"e-sg-9",name:"OSHA/infection control study guides",status:"DONE",detail:"Jan 29"},
+        {id:"e-sg-10",name:"AADSM Sleep Medicine exam prep",status:"IN_PROGRESS",detail:"Jan 28"},
+        {id:"e-sg-11",name:"Intraoral scanner deployment guide",status:"DONE",detail:"Feb 5"},
+      ]},
+      { id:"addl-ce", label:"Additional CE & Credentials", tasks:[
+        {id:"e-ac-1",name:"CIMEA credential evaluation (Iowa MS)",status:"DONE",detail:"Feb 12"},
+        {id:"e-ac-2",name:"Temporary SDF facility setup (D1354)",status:"DONE",detail:"Feb 10"},
+      ]},
+    ]
+  },
+];
+
+const GATES = [
+  { id:"gate1", label:"GATE 1", sub:"REGULATORY CLEARANCE", color:"#EF4444", angle:280,
+    conditions:["All HIPAA policies written + staff trained","All OSHA documents written + staff trained","General liability insurance bound","Property/equipment insurance active","Medical waste contract signed","Workers compensation bound"]},
+  { id:"gate2", label:"GATE 2", sub:"CLINICAL READINESS", color:"#60A5FA", angle:40,
+    conditions:["Operatories set up (chairs + compressor + vacuum)","Sterilization validated (equipment + spore test)","IEMA X-ray registration approved","Nitrous oxide operational","Amalgam separator installed","Infection control protocols posted"]},
+  { id:"gate3", label:"GATE 3", sub:"REVENUE OPERATIONS", color:"#34D399", angle:160,
+    conditions:["IMPACT confirmed + Dr. Amit associated","DentaQuest enrolled","At least one MCO credentialed","Fee schedule loaded in Archy","Scheduling templates live","Insurance verification configured","Archy billing functional","CAQH profile submitted","NPI numbers obtained"]},
+];
+
+/* DEPS removed — clean progress tracker */
+
+/* ══════════════════════════════════════════════════════════════
+   GEOMETRY
+   ══════════════════════════════════════════════════════════════ */
+
+const HUB_R = 70;
+const GATE_R = 165;
+const SPOKE_R = 300;
+const BRANCH_R = 430;
+const TASK_START_R = 510;
+const TASK_STEP = 40;
+const SPOKE_SPREAD = 32;
+
+function rad(deg){return deg*Math.PI/180}
+function polar(deg,r){return{x:r*Math.cos(rad(deg-90)),y:r*Math.sin(rad(deg-90))}}
+function spokeAngle(i){return(360/SPOKES.length)*i}
+
+function hexPoints(cx,cy,s){
+  return Array.from({length:6},(_,i)=>{
+    const a=rad(60*i-30);
+    return`${cx+s*Math.cos(a)},${cy+s*Math.sin(a)}`;
+  }).join(' ');
+}
+
+/* bezierArc removed — no dependency lines */
+
+/* Compute positions for every node */
+const POS={};
+const SPOKE_ANGLES={};
+
+function computeLayout(){
+  SPOKES.forEach((spoke,si)=>{
+    const angle=spokeAngle(si);
+    SPOKE_ANGLES[spoke.id]=angle;
+    const sp=polar(angle,SPOKE_R);
+    POS[spoke.id]=sp;
+
+    const bCount=spoke.branches.length;
+    spoke.branches.forEach((branch,bi)=>{
+      const bAngle=angle-SPOKE_SPREAD/2+(SPOKE_SPREAD/(Math.max(bCount-1,1)))*bi;
+      const bp=polar(bAngle,BRANCH_R);
+      POS[branch.id]=bp;
+      branch._angle=bAngle;
+
+      branch.tasks.forEach((task,ti)=>{
+        const tr=TASK_START_R+ti*TASK_STEP;
+        const tp=polar(bAngle,tr);
+        POS[task.id]=tp;
+      });
+    });
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   STATE
+   ══════════════════════════════════════════════════════════════ */
+
+let expanded={};
+let legendVisible=true;
+let vb={x:-900,y:-900,w:1800,h:1800};
+let dragging=false;
+let dragStart={x:0,y:0};
+let vbStart={x:0,y:0};
+
+try{
+  const saved=JSON.parse(localStorage.getItem('sd-depmap-state')||'{}');
+  if(saved.expanded)expanded=saved.expanded;
+  /* deps/critical state removed */
+}catch(e){}
+
+function saveState(){
+  try{localStorage.setItem('sd-depmap-state',JSON.stringify({expanded}))}catch(e){}
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RENDER
+   ══════════════════════════════════════════════════════════════ */
+
+function statusFill(s){
+  if(s==='DONE')return'#34D399';
+  if(s==='IN_PROGRESS')return'#60A5FA';
+  return'rgba(255,255,255,0.12)';
+}
+function statusStroke(s){
+  if(s==='DONE')return'#22C55E';
+  if(s==='IN_PROGRESS')return'#3B82F6';
+  return'rgba(255,255,255,0.2)';
+}
+function statusLabel(s){return s.replace(/_/g,' ')}
+
+function renderHub(){
+  let h='<g class="hub">';
+  h+=`<circle cx="0" cy="0" r="${HUB_R}" fill="rgba(255,255,255,0.03)" stroke="#F8FAFC" stroke-width="2"/>`;
+  h+=`<text x="0" y="-14" text-anchor="middle" fill="#F8FAFC" font-size="11" font-weight="800" letter-spacing="0.06em">SCHUYLER DENTAL</text>`;
+  h+=`<text x="0" y="4" text-anchor="middle" fill="#FBBF24" font-size="13" font-weight="800" letter-spacing="0.04em">JULY 2026</text>`;
+  h+=`<text x="0" y="22" text-anchor="middle" fill="#64748B" font-size="7.5" font-weight="500">First dental practice in Schuyler County</text>`;
+  h+='</g>';
+  return h;
+}
+
+function renderGates(){
+  let h='<g class="gates">';
+  GATES.forEach(gate=>{
+    const p=polar(gate.angle,GATE_R);
+    const size=42;
+    h+=`<g class="gate-group" data-gate="${gate.id}" style="--gc:${gate.color}">`;
+    h+=`<polygon points="${hexPoints(p.x,p.y,size)}" fill="${gate.color}10" stroke="${gate.color}" stroke-width="2" class="gate-hex"/>`;
+    h+=`<text x="${p.x}" y="${p.y-8}" text-anchor="middle" fill="${gate.color}" font-size="8" font-weight="800" letter-spacing="0.08em">${gate.label}</text>`;
+    h+=`<text x="${p.x}" y="${p.y+5}" text-anchor="middle" fill="#E2E8F0" font-size="6" font-weight="600">${gate.sub.split(' ').slice(0,2).join(' ')}</text>`;
+    h+=`<text x="${p.x}" y="${p.y+14}" text-anchor="middle" fill="#E2E8F0" font-size="6" font-weight="600">${gate.sub.split(' ').slice(2).join(' ')}</text>`;
+    // Line from gate to hub
+    const hp=polar(gate.angle,HUB_R+4);
+    const gp=polar(gate.angle,GATE_R-size-2);
+    h+=`<line x1="${hp.x}" y1="${hp.y}" x2="${gp.x}" y2="${gp.y}" stroke="${gate.color}25" stroke-width="1.5"/>`;
+    h+='</g>';
+  });
+  h+='</g>';
+  return h;
+}
+
+function renderSpokes(){
+  let h='<g class="spokes">';
+  SPOKES.forEach((spoke,si)=>{
+    const angle=SPOKE_ANGLES[spoke.id];
+    const sp=POS[spoke.id];
+    const isExpanded=expanded[spoke.id];
+
+    // Spoke line from hub to spoke header
+    const lineStart=polar(angle,HUB_R+8);
+    h+=`<line x1="${lineStart.x}" y1="${lineStart.y}" x2="${sp.x}" y2="${sp.y}" stroke="${spoke.color}" stroke-width="2" opacity="0.25"/>`;
+
+    // Risk ring for building spoke
+    if(spoke.id==='building'){
+      h+=`<circle cx="${sp.x}" cy="${sp.y}" r="52" fill="none" stroke="#EF4444" class="risk-ring"/>`;
+    }
+
+    // Spoke header circle
+    const headerR=36;
+    h+=`<g class="spoke-header" data-spoke="${spoke.id}" style="cursor:pointer">`;
+    h+=`<circle cx="${sp.x}" cy="${sp.y}" r="${headerR}" fill="${spoke.color}15" stroke="${spoke.color}" stroke-width="2"/>`;
+
+    // Count done/total
+    let total=0,done=0;
+    spoke.branches.forEach(b=>b.tasks.forEach(t=>{total++;if(t.status==='DONE')done++}));
+    const pct=total?Math.round(done/total*100):0;
+
+    h+=`<text x="${sp.x}" y="${sp.y-10}" text-anchor="middle" fill="${spoke.color}" font-size="7" font-weight="800" letter-spacing="0.06em">${spoke.label}</text>`;
+    h+=`<text x="${sp.x}" y="${sp.y+2}" text-anchor="middle" fill="#94A3B8" font-size="5.5" font-weight="500">${spoke.sub}</text>`;
+    h+=`<text x="${sp.x}" y="${sp.y+14}" text-anchor="middle" fill="${spoke.color}" font-size="8" font-weight="700">${done}/${total}</text>`;
+    h+=`<text x="${sp.x}" y="${sp.y+22}" text-anchor="middle" fill="#64748B" font-size="5.5">${pct}%</text>`;
+
+    // Risk badge on building
+    if(spoke.id==='building'){
+      h+=`<rect x="${sp.x-32}" y="${sp.y+30}" width="64" height="14" rx="3" fill="#7F1D1D" stroke="#EF4444" stroke-width="0.5"/>`;
+      h+=`<text x="${sp.x}" y="${sp.y+39}" text-anchor="middle" fill="#FCA5A5" font-size="6" font-weight="700">TIMELINE AT RISK</text>`;
+    }
+    h+='</g>';
+
+    // Branches and tasks (collapsible)
+    h+=`<g class="spoke-content${isExpanded?' expanded':''}" data-spoke-content="${spoke.id}">`;
+    spoke.branches.forEach(branch=>{
+      const bp=POS[branch.id];
+      // Branch line
+      h+=`<line x1="${sp.x}" y1="${sp.y}" x2="${bp.x}" y2="${bp.y}" stroke="${spoke.color}" stroke-width="1" opacity="0.3"/>`;
+      // Branch label
+      h+=`<g class="branch-label">`;
+      h+=`<circle cx="${bp.x}" cy="${bp.y}" r="4" fill="${spoke.color}40" stroke="${spoke.color}" stroke-width="0.5"/>`;
+
+      // Position label to avoid overlap with line
+      const labelAngle=branch._angle-90;
+      const labelR=16;
+      const lx=bp.x+labelR*Math.cos(rad(labelAngle));
+      const ly=bp.y;
+      const anchor=bp.x>0?'start':'end';
+      h+=`<text x="${bp.x+(bp.x>0?10:-10)}" y="${bp.y+3}" text-anchor="${anchor}" fill="${spoke.color}" font-size="6.5" font-weight="700">${branch.label}</text>`;
+      h+='</g>';
+
+      // Tasks
+      branch.tasks.forEach((task,ti)=>{
+        const tp=POS[task.id];
+        // Line from branch to task
+        const prevP=ti===0?bp:POS[branch.tasks[ti-1].id];
+        h+=`<line x1="${prevP.x}" y1="${prevP.y}" x2="${tp.x}" y2="${tp.y}" stroke="${spoke.color}" stroke-width="0.5" opacity="0.2"/>`;
+
+        const r=task.critical?7:5.5;
+        // Task node
+        h+=`<g class="task-node" data-task="${task.id}" style="cursor:pointer">`;
+
+        // Risk highlight
+        if(task.risk){
+          h+=`<circle cx="${tp.x}" cy="${tp.y}" r="${r+3}" fill="none" stroke="#EF4444" stroke-width="1.5" opacity="0.6"/>`;
+        }
+        // Critical path ring
+        if(task.critical){
+          h+=`<circle cx="${tp.x}" cy="${tp.y}" r="${r+2}" fill="none" stroke="#FBBF24" stroke-width="1.5" opacity="0.7"/>`;
+        }
+        h+=`<circle cx="${tp.x}" cy="${tp.y}" r="${r}" fill="${statusFill(task.status)}" stroke="${statusStroke(task.status)}" stroke-width="1"/>`;
+
+        // Task label
+        const ta=bp.x>=0?'start':'end';
+        const tx=tp.x+(bp.x>=0?r+4:-(r+4));
+        h+=`<text x="${tx}" y="${tp.y-4}" text-anchor="${ta}" fill="#CBD5E1" font-size="5.5" font-weight="500">${task.name}</text>`;
+
+        // Status + date micro-label
+        let micro=statusLabel(task.status);
+        if(task.target)micro+=` | ${task.target}`;
+        const statusColor=task.status==='DONE'?'#34D399':task.status==='IN_PROGRESS'?'#60A5FA':'#64748B';
+        h+=`<text x="${tx}" y="${tp.y+4}" text-anchor="${ta}" fill="${statusColor}" font-size="4" font-weight="600">${micro}</text>`;
+
+        h+='</g>';
+      });
+    });
+    h+='</g>';
+  });
+  h+='</g>';
+  return h;
+}
+
+function updateStats(){
+  let total=0,done=0,ip=0,ns=0;
+  SPOKES.forEach(s=>s.branches.forEach(b=>b.tasks.forEach(t=>{
+    total++;
+    if(t.status==='DONE')done++;
+    else if(t.status==='IN_PROGRESS')ip++;
+    else ns++;
+  })));
+  const pct=total?Math.round(done/total*100):0;
+  document.getElementById('stats-bar').style.width=pct+'%';
+  document.getElementById('stats-pct').textContent=pct+'% Complete';
+  document.getElementById('stats-counts').innerHTML=`<span class="done-c">${done}</span> Done · <span class="ip-c">${ip}</span> In Progress · <span class="ns-c">${ns}</span> Not Started<br><span>${total}</span> total tasks`;
+}
+
+
+function render(){
+  computeLayout();
+  let svg='';
+  svg+=`<defs>`;
+  svg+=`<radialGradient id="hubGlow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="rgba(248,250,252,0.04)"/><stop offset="100%" stop-color="rgba(248,250,252,0)"/></radialGradient>`;
+  svg+=`</defs>`;
+  // Background glow
+  svg+=`<circle cx="0" cy="0" r="250" fill="url(#hubGlow)"/>`;
+  // Render layers back to front
+  svg+=renderSpokes();
+  svg+=renderGates();
+  svg+=renderHub();
+
+  const mapEl=document.getElementById('map');
+  mapEl.setAttribute('viewBox',`${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+  mapEl.innerHTML=svg;
+
+  // Update stats panel
+  updateStats();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   INTERACTIONS
+   ══════════════════════════════════════════════════════════════ */
+
+function toggleSpoke(spokeId){
+  const isMobile=window.innerWidth<768;
+  if(expanded[spokeId]){
+    expanded[spokeId]=false;
+  }else{
+    if(isMobile){expanded={}}
+    expanded[spokeId]=true;
+  }
+  // Apply expand/collapse via class toggle (no re-render needed for animation)
+  document.querySelectorAll('[data-spoke-content]').forEach(el=>{
+    const id=el.getAttribute('data-spoke-content');
+    if(expanded[id]){el.classList.add('expanded')}
+    else{el.classList.remove('expanded')}
+  });
+  saveState();
+}
+
+function expandAll(){
+  SPOKES.forEach(s=>{expanded[s.id]=true});
+  document.querySelectorAll('[data-spoke-content]').forEach(el=>el.classList.add('expanded'));
+  saveState();
+}
+function collapseAll(){
+  expanded={};
+  document.querySelectorAll('[data-spoke-content]').forEach(el=>el.classList.remove('expanded'));
+  saveState();
+}
+function resetView(){
+  vb={x:-900,y:-900,w:1800,h:1800};
+  document.getElementById('map').setAttribute('viewBox',`${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+}
+/* toggleDeps/toggleCritical removed */
+function toggleLegend(){
+  legendVisible=!legendVisible;
+  document.getElementById('legend').className='legend'+(legendVisible?'':' hidden');
+}
+
+// Tooltip
+const ttEl=document.getElementById('tooltip');
+function showTooltip(task,x,y){
+  let html=`<div class="tt-name">${task.name}</div>`;
+  if(task.detail)html+=`<div class="tt-detail">${task.detail}</div>`;
+  const sc=task.status==='DONE'?'done':task.status==='IN_PROGRESS'?'in-progress':'not-started';
+  html+=`<span class="tt-status ${sc}">${statusLabel(task.status)}</span>`;
+  if(task.target)html+=`<div class="tt-date">Target: ${task.target}</div>`;
+  if(task.risk)html+=`<div class="tt-risk">⚠ RISK: Timeline extends past opening target</div>`;
+  ttEl.innerHTML=html;
+  // Position
+  const pad=16;
+  let left=x+pad;
+  let top=y+pad;
+  if(left+340>window.innerWidth)left=x-340-pad;
+  if(top+200>window.innerHeight)top=y-200;
+  ttEl.style.left=left+'px';
+  ttEl.style.top=top+'px';
+  ttEl.className='tooltip visible';
+}
+function hideTooltip(){
+  ttEl.className='tooltip';
+}
+
+// Task lookup
+const TASK_MAP={};
+SPOKES.forEach(s=>s.branches.forEach(b=>b.tasks.forEach(t=>{TASK_MAP[t.id]=t})));
+
+// Event delegation on SVG
+document.getElementById('map').addEventListener('click',function(e){
+  const spokeHeader=e.target.closest('[data-spoke]');
+  if(spokeHeader){
+    toggleSpoke(spokeHeader.getAttribute('data-spoke'));
+    return;
+  }
+  const taskNode=e.target.closest('[data-task]');
+  if(taskNode){
+    const taskId=taskNode.getAttribute('data-task');
+    const task=TASK_MAP[taskId];
+    if(task){
+      const rect=taskNode.getBoundingClientRect();
+      showTooltip(task,rect.left+rect.width/2,rect.top+rect.height/2);
+    }
+    return;
+  }
+  hideTooltip();
+});
+
+// Pan
+const container=document.getElementById('map-container');
+const mapSvg=document.getElementById('map');
+
+container.addEventListener('pointerdown',function(e){
+  if(e.target.closest('[data-spoke]')||e.target.closest('[data-task]'))return;
+  dragging=true;
+  container.classList.add('grabbing');
+  dragStart={x:e.clientX,y:e.clientY};
+  vbStart={x:vb.x,y:vb.y};
+  container.setPointerCapture(e.pointerId);
+});
+container.addEventListener('pointermove',function(e){
+  if(!dragging)return;
+  const scale=vb.w/container.clientWidth;
+  vb.x=vbStart.x-(e.clientX-dragStart.x)*scale;
+  vb.y=vbStart.y-(e.clientY-dragStart.y)*scale;
+  mapSvg.setAttribute('viewBox',`${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+});
+container.addEventListener('pointerup',function(){
+  dragging=false;
+  container.classList.remove('grabbing');
+});
+
+// Zoom
+container.addEventListener('wheel',function(e){
+  e.preventDefault();
+  const zoomFactor=e.deltaY>0?1.1:0.9;
+  const rect=container.getBoundingClientRect();
+  const mx=(e.clientX-rect.left)/rect.width;
+  const my=(e.clientY-rect.top)/rect.height;
+  const newW=vb.w*zoomFactor;
+  const newH=vb.h*zoomFactor;
+  vb.x+=(vb.w-newW)*mx;
+  vb.y+=(vb.h-newH)*my;
+  vb.w=newW;
+  vb.h=newH;
+  mapSvg.setAttribute('viewBox',`${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+},{passive:false});
+
+// Touch zoom
+let lastTouchDist=0;
+container.addEventListener('touchstart',function(e){
+  if(e.touches.length===2){
+    lastTouchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+  }
+},{passive:true});
+container.addEventListener('touchmove',function(e){
+  if(e.touches.length===2){
+    const dist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    if(lastTouchDist>0){
+      const scale=lastTouchDist/dist;
+      const newW=vb.w*scale;
+      const newH=vb.h*scale;
+      vb.x+=(vb.w-newW)*0.5;
+      vb.y+=(vb.h-newH)*0.5;
+      vb.w=newW;
+      vb.h=newH;
+      mapSvg.setAttribute('viewBox',`${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+    }
+    lastTouchDist=dist;
+  }
+},{passive:true});
+container.addEventListener('touchend',function(){lastTouchDist=0},{passive:true});
+
+// Close tooltip on outside click
+document.addEventListener('click',function(e){
+  if(!e.target.closest('#map')&&!e.target.closest('.tooltip')){hideTooltip()}
+});
+
+/* ══════════════════════════════════════════════════════════════
+   INIT
+   ══════════════════════════════════════════════════════════════ */
+render();
+</script>
+</body>
+</html>
